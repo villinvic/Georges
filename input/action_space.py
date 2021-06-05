@@ -66,7 +66,7 @@ class ActionSpace:
         (0.5 * (1 + np.cos(x)), 0.5 * (1 + np.sin(x))) for x in np.arange(1, 17, 2) * np.pi * 0.125
     ]
 
-    all_stick_states = neutral + cardinal + diagonal
+    all_stick_states = neutral + cardinal + diagonal + other_angles
 
     stick_states_upB = [
         (0.853, 0.853),
