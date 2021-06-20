@@ -42,7 +42,7 @@ class Tournament(Default):
         for i,p in enumerate(self.pools):
             for j, match in enumerate(p.matches()):
                 t1, t2 = match
-                yield 'pool', *t1, *t2
+                yield 'pool', (*t1, *t2)
 
 
     def step(self, type, p1, p2, p3, p4, result):
@@ -70,7 +70,7 @@ class Tournament(Default):
 
     def do_brackets(self):
         for match in self.bracket.matches():
-            yield 'bracket', *self.teams[match[0]], *self.teams[match[1]]
+            yield 'bracket', (*self.teams[match[0]], *self.teams[match[1]])
 
     def __call__(self):
         for m in self.do_pools():

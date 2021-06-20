@@ -46,6 +46,9 @@ class Pad(Default):
     def unbind(self):
         if not self.windows:
             self.pipe.close()
+            os.unlink(self.path)
+
+        self.message = ""
 
     def flush(self):
         if self.windows:

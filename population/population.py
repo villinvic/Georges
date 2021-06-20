@@ -13,6 +13,9 @@ class Population:
         self.total_size = n_reference+self.size
         self.n = 0
 
+        self.to_serializable_v = np.vectorize(lambda individual: individual.get_all())
+        self.read_pickled_v = np.vectorize(lambda individual, x: individual.set_all(x))
+
     def ranking(self):
         return sorted(self.individuals, key=lambda individual: individual.elo())
 
@@ -34,17 +37,30 @@ class Population:
         else:
             raise StopIteration
 
-    def initialize(self):
+    def initialize(self, individual_ids=None):
 
-        np.random.shuffle(characters.start_chars)
-        n_chars = len(characters.start_chars)
-        for ID in range(self.size):
-            self.individuals[ID] = Individual(ID, characters.start_chars[ID % n_chars])
-        for ID_reference in range(self.size, self.total_size):
-            self.individuals[ID_reference] = Individual(ID_reference, characters.Fox, is_cpu=True, name='20XX')
+        if individual_ids is None:
+            np.random.shuffle(characters.start_chars)
+            n_chars = len(characters.start_chars)
+            for ID in range(self.size):
+                self.individuals[ID] = Individual(ID, characters.start_chars[ID % n_chars])
+            for ID_reference in range(self.size, self.total_size):
+                self.individuals[ID_reference] = Individual(ID_reference, characters.Fox, is_cpu=True, name='20XX')
+        else:
+            for index, ID in enumerate(individual_ids):
+                self.individuals[index] = Individual(ID, characters.Character)
 
     def __repr__(self):
         return self.individuals.__repr__()
+
+    def to_serializable(self):
+        return self.to_serializable_v(self.individuals[:self.size])
+
+    def read_pickled(self, params):
+        self.read_pickled_v(self.individuals[:self.size], params)
+
+    def save(self, path):
+        pass
 
 
 

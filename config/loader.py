@@ -32,11 +32,11 @@ class Default:
 
     def __init__(self):
         configfile = 'config/' + inspect.getmodule(self).__file__.split('/')[-2].lower() + '.ini'
-
         self.config = ConfigLoader.load(configfile)
 
         for k,v in self.config[self.__class__.__name__].items():
             t, value = v.split()
+            #value = " ".join(value)
             if t == 'csv':
                 with open('config/'+value+'.csv', newline='') as file:
                     data = pandas.read_csv(file, delimiter=',')

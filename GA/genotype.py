@@ -3,13 +3,28 @@ import numpy as np
 from config.loader import Default
 from GA import misc
 from characters.characters import Mario, available_chars, enum2index
+from training.RL import Policy
+from tensorflow.keras.layers import Dense, LSTM
 from collections import deque
+from copy import deepcopy
 
 
 class Genotype(Default):
-    def __init__(self, initial_char = Mario, initial_brain=None, is_dummy=False):
+    _base_keys = [
+        'learning',
+        'experience',
+        'type'
+    ]
+
+    _special = [
+        'brain'
+    ]
+
+    def __init__(self, state_dim, initial_char = Mario, is_dummy=False):
         super(Genotype, self).__init__()
         self.is_dummy = is_dummy
+        self.layer_dims = []
+        self.lstm_dim = 0
 
         if is_dummy:
             self._genes = {
@@ -20,12 +35,25 @@ class Genotype(Default):
             }
 
         else:
+            for type, dimension in self.brain_model:
+                if type == 'Dense':
+                    self.layer_dims.append(dimension)
+                elif type == 'LSTM':
+                    self.lstm_dim = dimension
+                else:
+                    print('Unsupported layer type... (%s)' %type)
+
+            # get rid of the panda data
+            del self.brain_model
+
             self._genes = {
-                'brain': initial_brain, # brain function (must have a __call__ and perturb function) Usually an NN
+                'brain': Policy(initial_char.action_space.dim, self.layer_dims, self.lstm_dim), # brain function (must have a __call__ and perturb function) Usually an NN
                 'learning': LearningParams(),
                 'experience': RewardShape(),
                 'type': EvolvingCharacter(initial_char),
             }
+
+            self._genes['brain'].init_body(np.zeros((1,1,state_dim)))
 
     def perturb(self):
         if not self.is_dummy:
@@ -33,11 +61,20 @@ class Genotype(Default):
                 if gene_family is not None:
                     gene_family.perturb()
 
-    def get_params(self):
-        return self._genes
+    def get_params(self, full_brain=False):
+        if full_brain:
+            c = {'brain': self._genes['brain']}
+        else:
+            c= {'brain': self._genes['brain'].get_params()}
+
+        c.update({key: self._genes[key].copy() for key in self._base_keys})
+
+        return c
 
     def set_params(self, new_genes):
-        self._genes = new_genes
+        for key in self._base_keys:
+            self._genes[key] = new_genes[key]
+        self._genes['brain'].set_params(new_genes['brain'])
 
     def __repr__(self):
         return self._genes.__repr__()
@@ -45,10 +82,18 @@ class Genotype(Default):
     def __getitem__(self, item):
         return self._genes[item]
 
+    def __setitem__(self, key, value):
+        self._genes[key] = value
+
     def crossover(self, other_genotype):
-        for gene_family, other_gene_family in zip(self._genes.values(), other_genotype._genes.value()):
+        genes = self.get_params(full_brain=True)
+        for gene_family, other_gene_family in zip(genes.values(), other_genotype._genes.values()):
             if gene_family is not None:
                 gene_family.crossover(other_gene_family)
+
+        genes['brain'] = genes['brain'].get_params()
+
+        return genes
 
 
 
@@ -56,6 +101,9 @@ class EvolvingFamily:
     def __init__(self):
         self._variables = {name: EvolvingVariable(name, (domain_lower, domain_higher), self.perturb_power, self.perturb_chance) for name, domain_lower, domain_higher
                           in self.variable_base}
+
+        # get rid of the panda data
+        del self.variable_base
 
     def __getitem__(self, item):
         return self._variables[item].get()
@@ -65,7 +113,7 @@ class EvolvingFamily:
             variable.perturb()
 
     def crossover(self, other_family):
-        for variable, other_variable in zip(self._variables.values(), other_family.values()):
+        for variable, other_variable in zip(self._variables.values(), other_family._variables.values()):
             variable.crossover(other_variable)
 
     def __repr__(self):
@@ -76,10 +124,25 @@ class RewardShape(Default, EvolvingFamily):
     def __init__(self):
         super().__init__()
 
+    def copy(self):
+        new = RewardShape()
+        new._variables = {}
+        for k, v in self._variables.items():
+            new._variables[k] = v.copy()
+        return new
+
 
 class LearningParams(Default, EvolvingFamily):
     def __init__(self):
         super().__init__()
+
+
+    def copy(self):
+        new = LearningParams()
+        new._variables = {}
+        for k, v in self._variables.items():
+            new._variables[k] = v.copy()
+        return new
 
 
 class EvolvingVariable(Default):
@@ -116,6 +179,14 @@ class EvolvingVariable(Default):
     def get(self):
         return self._current_value
 
+    def copy(self):
+        new = EvolvingVariable(name=self.name, domain=(0,1), perturb_power=self.perturb_power, perturb_chance=self.perturb_chance, frozen=self.frozen)
+        new.domain = self.domain
+        new._current_value = self._current_value
+        new.history = deepcopy(self.history)
+
+        return new
+
 
 class EvolvingCharacter(Default):
     def __init__(self, initial_char = Mario, frozen=False):
@@ -149,4 +220,10 @@ class EvolvingCharacter(Default):
 
     def unfreeze(self):
         self.frozen = False
+
+    def copy(self):
+        new = EvolvingCharacter(initial_char=self._character, frozen=self.frozen)
+        new.history = deepcopy(self.history)
+
+        return new
 

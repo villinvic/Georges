@@ -10,6 +10,8 @@ import numpy as np
 import threading
 from collections import deque
 from time import time
+
+
 class Player:
     def __init__(self,
                  index,
@@ -25,13 +27,17 @@ class Player:
         self.last_action_id = 0
 
         self.state_dim = state_dim
+        self.training_connection = None
+        self.param_updater = None
         self.trajectory_length = trajectory_length
         self.trajectory_index = 0
         self.trajectory = {
             'state' : np.zeros((trajectory_length, state_dim), dtype=np.float32),
             'action' : np.zeros((trajectory_length,), dtype=np.int32),
             'probs': None, # to set when char attributed (to match action_dim)
+            'hidden_states': np.zeros((2, 256),  dtype=np.float32),
             'time': None,
+            'id': 0
         }
 
         self.char = None
@@ -40,28 +46,20 @@ class Player:
         self.policy = None
         self.action_space = None
         self.action_queue = deque()
-
-        self.r = Rewards(1, self.trajectory_length)
-        self.scales = {
-            'hit_dmg' : 1.,
-            'hurt_dmg' :1.,
-            'hurt_ally_dmg': 1.,
-            'kill' : 1.,
-            'death': 1.,
-            'death_ally' : 1.,
-            'win': 1.,
-            'combo':1.,
-            'negative_scale':1.,
-            'action_state_entropy':1.,
-        }
+        self.individual = None
 
     def attribute_individual(self, individual):
-        self.char = individual.char
+        self.char = individual.char().get()
         self.type = individual.type
         self.costumes = self.char.costumes
         self.policy = individual.policy
         self.action_space = self.char.action_space
         self.trajectory['probs'] = np.zeros((self.trajectory_length, self.action_space.dim), dtype=np.float32)
+        self.trajectory['id'] = individual.id
+        self.training_connection = None
+        if hasattr(individual, 'connection'):
+            self.training_connection = individual.connection
+            self.param_updater = individual.update_params
 
     def press_A(self):
         self.pad.press_button(Button.A)
@@ -71,7 +69,8 @@ class Player:
             if not self.action_queue:
                 traj_index = self.trajectory_index % self.trajectory_length
                 state.get(self.trajectory['state'][traj_index], self.index, self.last_action_id)
-                action_id, distribution = self.policy(self.trajectory['state'][traj_index])
+
+                action_id, distribution, hidden_h, hidden_c = self.policy(self.trajectory['state'][traj_index])
                 action = self.action_space[action_id]
                 if isinstance(action, list):
                     self.action_queue.extend(reversed(action))
@@ -83,7 +82,11 @@ class Player:
 
                 if traj_index == 0:
                     self.trajectory['time'] = time()
+                    self.trajectory['hidden_states'][:] = hidden_h, hidden_c
 
+                    if self.trajectory_index > 0 and self.training_connection is not None:
+                        self.training_connection.send_exp(self.trajectory)
+                        self.param_updater()
 
                 self.trajectory_index += 1
 
@@ -99,17 +102,12 @@ class Player:
                 self.trajectory['state'][traj_index:] = self.trajectory['state'][traj_index-1]
                 self.trajectory_index = 0
 
-                # send traj
+                if self.training_connection is not None:
+                    self.training_connection.send_exp(self.trajectory)
+                    self.param_updater()
 
-
-    def link(self, individual_id):
-        pass
-
-    def unlink(self):
-        pass
-
-    def send_trajectory(self):
-        pass
+            self.action_queue.clear()
+            self.next_possible_move_frame = -np.inf
 
 
 class PlayerGroup:
@@ -132,6 +130,7 @@ class PlayerGroup:
     def disconnect_pads(self):
         for p in self.players:
             p.pad.unbind()
+            p.pad.pipe.close()
 
     def attribute_individuals(self, players):
         for i,p in enumerate(players):

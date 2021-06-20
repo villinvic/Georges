@@ -70,7 +70,7 @@ class Name:
         if len(other_names) == 1:
             addition = np.random.choice(self._all)
         else:
-            addition = other_names[1]
+            addition = other_names[1]._name
         offset = np.random.choice([ceil, floor])
         if np.random.random() < 0.5:
             self._name = other_names[0]._name[:offset(len(other_names[0]._name)/2)] + addition[offset(len(addition)/2):]

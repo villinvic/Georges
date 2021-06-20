@@ -1,6 +1,5 @@
 import numpy as np
 
-from config.loader import Default
 from game.state import GameState
 from game.state import PlayerState
 
@@ -83,7 +82,7 @@ class Rewards:
         self.values[:, :] = np.sum([self[event]*reward_shape[event]/state_scale for event, state_scale in self.base.items()], axis=0)
         #self.values[:, :] = (1.0 - reward_shape['negative_scale']) * np.maximum(total, 0.) + total
 
-        return self.values, self.scores
+        return self.values
 
 
 

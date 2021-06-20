@@ -1,1 +1,0 @@
-['[Gecko]\n', '\n', '[Gecko_Enabled]\n', '$Required: General Codes\n', '$Required: Slippi Recording\n', '$Required: Slippi Online\n', '$Recommended: Normal Lag Reduction\n', '$Recommended: Polling drift fix + VB\n', '-Optional: Widescreen 16:9\n', '-Optional: Disable Screen Shake\n', '-Optional: Center Align 2P HUD\n', '-Optional: Flash Red on Failed L-Cancel\n']

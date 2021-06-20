@@ -35,6 +35,6 @@ class Elo(Default):
         return self.start
 
     def win_prob(self, other_elo):
-        np.exp(-(self.p(self.start-other_elo)-0.5)**2/(2*self.gamma**2))/ (np.sqrt(2*np.pi)*self.gamma)
+        return np.exp(-(self.p(self.start-other_elo)-0.5)**2/(2*self.gamma**2))/ (np.sqrt(2*np.pi)*self.gamma)
 
 

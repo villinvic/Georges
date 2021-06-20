@@ -517,7 +517,7 @@ class GameState:
 
 
     def update_players(self, players):
-        self.chars = [p.char for p in players]
+        self.chars = [p.char().get() for p in players]
 
 
     def __getitem__(self, item):

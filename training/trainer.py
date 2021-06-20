@@ -1,44 +1,50 @@
 import zmq
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 import signal
-from time import time
+from time import time, sleep
 import sys
 import fire
+import os
+import pickle
 
+import tensorflow as tf
+from training import RL
 from config.loader import Default
+from logger.logger import Logger
 from game.state import GameState
 from training.reward import Rewards
+from population.population import Population
 
 
-class Trainer(Default):
-    def __init__(self, id, ip, individual_ids):
+class Trainer(Default, Logger):
+    def __init__(self, ID=0, ip='', individual_ids=[]):
         super(Trainer, self).__init__()
 
         self.rewards = Rewards(self.batch_size, self.TRAJECTORY_LENGTH)
-
-        self.id = self.gpu_id = id
+        self.id = self.gpu_id = ID
         self.ip = ip
         self.individual_ids = {individual_id : i for i, individual_id in enumerate(individual_ids)}
 
-        self.trained = np.empty((len(individual_ids)), dtype=object)
-        for i in range(len(self.trained)):
-            self.trained[i] = None
+        self.trained = Population(len(individual_ids), n_reference=0)
+        self.trained.initialize(individual_ids=individual_ids)
+
+        self.param_port = self.PARAM_PORT_BASE + ID
+        self.exp_port = self.EXP_PORT_BASE + ID
 
         c = zmq.Context()
         self.param_socket = c.socket(zmq.PUB)
-        self.param_socket.bind("tcp://%s:%d" % (self.ip, self.PARAM_PORT))
+        self.param_socket.bind("tcp://%s:%d" % (self.ip, self.param_port))
         self.exp_socket = c.socket(zmq.PULL)
-        self.exp_socket.bind("tcp://%s:%d" % (self.ip, self.EXP_PORT))
+        self.exp_socket.bind("tcp://%s:%d" % (self.ip, self.exp_port))
 
         self.hub_pub_pipe= c.socket(zmq.SUB)
         self.hub_pub_pipe.subscribe(b'')
 
-        self.hub_reply_pipe = c.socket(zmq.REP)
+        self.hub_update_pipe = c.socket(zmq.PUSH)
         # Hub and Trainer should have the same IP
-        self.hub_reply_pipe.connect("icp://%s_%d" % (self.HUB_REQREP, id))
-        self.hub_pub_pipe.connect("icp://%s" % (self.HUB_PUBSUB))
+        self.hub_update_pipe.connect("ipc://%s" % self.HUB_PUSHPULL)
+        self.hub_pub_pipe.connect("ipc://%s" % (self.HUB_PUBSUB))
 
         self.exp = [[] for _ in range(len(self.individual_ids))]
         self.rcved = 0
@@ -47,65 +53,62 @@ class Trainer(Default):
 
         signal.signal(signal.SIGINT, self.exit)
 
+        self.logger.info('Trainer %d bound to ports (%d, %d) initialized' % (self.id, self.param_port, self.exp_port))
+
+
     def read_pop_update(self):
         try:
-            individuals =  self.hub_pub_pipe.recv_pyobj(zmq.NOBLOCK)
+            individuals = self.hub_pub_pipe.recv_pyobj(zmq.NOBLOCK)
             for individual in individuals:
-                if individual.id in self.individual_ids:
-                    self.trained[self.individual_ids[individual.id]] = individual
+                if individual['id'] in self.individual_ids:
+                    self.trained[self.individual_ids[individual['id']]].set_all(individual)
                     # self.pub_params(individual.id)
+                    self.logger.debug('Trainer %d updated individual %d from Hub' % (self.id, individual['id']))
             return True
         except zmq.ZMQError:
             pass
         return False
 
-    def reply_hub(self):
+    def update_hub(self):
         try:
-            self.hub_reply_pipe.recv(flag=zmq.NOBLOCK)
             # If we received something, then we must submit our trained individuals
-            self.hub_reply_pipe.send_pyobj(self.trained)
+            self.hub_update_pipe.send_pyobj(self.trained.to_serializable(), zmq.NOBLOCK)
+            self.logger.debug('sent update to hub')
         except zmq.ZMQError as e:
-            print(e)
+            pass
 
     def recv_training_data(self):
         received = 0
         try:
             while True:
                 traj = self.exp_socket.recv_pyobj(zmq.NOBLOCK)
-                self.exp[self.individual_ids[traj['id']]].append(traj['traj'])
+                self.exp[self.individual_ids[traj['id']]].append(traj)
                 received += 1
         except zmq.ZMQError:
             pass
         self.rcved += received
 
-    def pub_params(self, specified=None):
-        if specified is not None:
+    def pub_params(self):
+        for individual in self.trained:
             try:
-                self.param_socket.send(str(specified).encode(), zmq.SNDMORE)
-                self.param_socket.send_pyobj(self.trained[self.individual_ids[specified]].get_params(), flags=zmq.NOBLOCK)
+                #self.param_socket.send_string(str(individual.id), zmq.SNDMORE)
+                #self.param_socket.send_pyobj(individual.get_arena_genes(), flags=zmq.NOBLOCK)
+                self.param_socket.send_multipart([str(individual.id).encode(), pickle.dumps(individual.get_arena_genes())])
             except zmq.ZMQError:
                 pass
-
-        else:
-            for individual in self.trained:
-                try:
-                    self.param_socket.send(str(individual.id).encode(), zmq.SNDMORE)
-                    self.param_socket.send_pyobj(individual.get_params(), flags=zmq.NOBLOCK)
-                except zmq.ZMQError:
-                    pass
 
     def train(self, individual_index):
         if self.trained[individual_index] is not None and len(self.exp[individual_index]) >= self.batch_size:
             # Get experience from the queue
             trajectory = pd.DataFrame(self.exp[individual_index][:self.batch_size]).values
-            self.exp = self.exp[individual_index][self.batch_size:]
+            self.exp[individual_index] = self.exp[individual_index][self.batch_size:]
 
             # Cook data
             states = np.float32(np.stack(trajectory[:, 0], axis=0))
             actions = np.float32(np.stack(trajectory[:, 1], axis=0)[:, :-1])
             probs = np.float32(np.stack(trajectory[:, 2], axis=0)[:, :-1])
-            is_old = np.any(time() - np.stack(trajectory[:, 3], axis=0)[:, 0, :] > self.batch_age_limit)
-
+            hidden_states = np.float32(np.stack(trajectory[:, 3], axis=0)[:, :-1])
+            is_old = np.any(time() - np.stack(trajectory[:, 4], axis=0)> self.batch_age_limit)
             rews = self.rewards.compute(states, self.trained[individual_index].get_reward_shape())[:, :, np.newaxis]
 
             states *= GameState.scales
@@ -113,11 +116,11 @@ class Trainer(Default):
             if not is_old :
                 # Train
                 with tf.summary.record_if(self.train_cntr % self.write_summary_freq == 0):
-                    self.trained[individual_index].train(states, actions, rews, probs, gpu=self.gpu_id)
+                    self.trained[individual_index].train(states, actions, rews, probs, hidden_states, gpu=0)
 
                 self.trained[individual_index].data_used += self.batch_size * self.TRAJECTORY_LENGTH
             else:
-                print('Experience too old !')
+                print('Experience too old !', individual_index, self.train_cntr)
 
     def train_each(self):
         tf.summary.experimental.set_step(self.train_cntr)
@@ -137,43 +140,54 @@ class Trainer(Default):
                 for exp in self.exp:
                     total_waiting += len(exp)
 
-                print('exp waiting : ', total_waiting)
+                if total_waiting>0:
+                    self.logger.debug('exp waiting at Trainer %d : %d' % (self.id, total_waiting))
 
-    def run(self):
-        success = False
-        c = 0
-        while not success:
-            success = self.read_pop_update()
-            c += 1
-            if c > 30 :
-                print('Cant connect to Hub !')
+    def __call__(self):
+        try:
+            success = False
+            c = 0
+            while not success:
+                success = self.read_pop_update()
+                c += 1
+                sleep(1)
+                if c > 15 :
+                    self.logger.warning('Trainer %d Cant connect to Hub !' %self.id)
 
-        self.pub_params()
-        last_pub_time = time()
+            self.pub_params()
+            last_pub_time = time()
+            last_update_time = time()
 
-        while True:
-            self.reply_hub()
-            self.read_pop_update()
-            self.recv_training_data()
-            self.train_each()
+            while True:
+                self.read_pop_update()
+                self.recv_training_data()
+                self.train_each()
 
-            if time() - last_pub_time > 10:
-                self.pub_params()
-                last_pub_time = time()
+                current = time()
+                if current - last_pub_time > 10:
+                    self.pub_params()
+                    last_pub_time = current
+                if current - last_update_time > self.hub_update_freq_minutes*60:
+                    self.update_hub()
+                    last_update_time = current
+
+        except KeyboardInterrupt:
+            self.logger.info('Trainer %d exited.' % self.id)
 
     def exit(self, sig, frame):
-        self.exp_socket.unbind()
-        self.param_socket.unbind()
-        print('Trainer', self.id, 'exited.')
-        sys.exit(0)
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        try:
-            self.exp_socket.unbind()
-            self.param_socket.unbind()
-        except:
+        try :
+            self.exp_socket.unbind("tcp://%s:%d" % (self.ip, self.exp_port))
+        except zmq.ZMQError as e:
             pass
+        try:
+            self.param_socket.unbind("tcp://%s:%d" % (self.ip, self.param_port))
+        except zmq.ZMQError as e:
+            pass
+
+        self.logger.info('Trainer %d exited.' % self.id)
+        sys.exit(0)
 
 
 if __name__ == '__main__':
-    fire.Fire(Trainer)
+
+    sys.exit(fire.Fire(Trainer))

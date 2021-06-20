@@ -122,7 +122,7 @@ class ActionSpace:
                      [ControllerState(stick=stick, button='L') for stick in
                       (self.neutral + self.cardinal + self.diagonal)] + \
                      [[ControllerState(stick=stick, button='X', duration=short_hop),
-                       ControllerState(stick=stick, duration=1), ControllerState(stick=stick, duration=1)] for stick in
+                       ControllerState(stick=stick, duration=1), ControllerState(stick=stick, button='L', duration=1)] for stick in
                       (self.wave_dash_sticks)] + \
                      [[ControllerState(stick=stick, button='B', duration=1), ControllerState(stick=stick, duration=1)]
                       for stick in (self.back_front)] + \
