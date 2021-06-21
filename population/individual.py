@@ -110,3 +110,20 @@ class Individual:
                'Age = {age}\n' \
                'genes = {genotype}\n'.format(ID=self.id, name=self.name.get(), age=self.elo.n, elo=self.elo(),
                                              genotype=self.genotype if not self.type == PlayerType.CPU else 'ingame_CPU')
+
+
+class Trainable(Individual):
+    def __init__(self,
+                 ID,
+                 char,
+                 is_cpu=False,
+                 name=None,
+                 test=False,
+                 ):
+        super(Trainable, self).__init__(ID, char, is_cpu, name, test)
+
+    # redefine arena genes methods (AC class and Policy class)
+
+    def train(self):
+        # load individual params when training
+        pass

@@ -18,8 +18,13 @@ from population.population import Population
 
 
 class Trainer(Default, Logger):
-    def __init__(self, ID=0, ip='', individual_ids=[]):
+    def __init__(self, ID=0, ip='', individual_ids=[], instance_id='Georges_'):
         super(Trainer, self).__init__()
+
+        log_dir = 'logs/' + instance_id + '/train_' + str(ID)
+        self.writer = tf.summary.create_file_writer(log_dir)
+        self.writer.set_as_default()
+        #==============================================================#
 
         self.rewards = Rewards(self.batch_size, self.TRAJECTORY_LENGTH)
         self.id = self.gpu_id = ID
@@ -27,7 +32,7 @@ class Trainer(Default, Logger):
         self.individual_ids = {individual_id : i for i, individual_id in enumerate(individual_ids)}
 
         self.trained = Population(len(individual_ids), n_reference=0)
-        self.trained.initialize(individual_ids=individual_ids)
+        self.trained.initialize(individual_ids=individual_ids, trainable=True)
 
         self.param_port = self.PARAM_PORT_BASE + ID
         self.exp_port = self.EXP_PORT_BASE + ID
@@ -108,26 +113,34 @@ class Trainer(Default, Logger):
             actions = np.float32(np.stack(trajectory[:, 1], axis=0)[:, :-1])
             probs = np.float32(np.stack(trajectory[:, 2], axis=0)[:, :-1])
             hidden_states = np.float32(np.stack(trajectory[:, 3], axis=0)[:, :-1])
-            is_old = np.any(time() - np.stack(trajectory[:, 4], axis=0)> self.batch_age_limit)
+            is_old = np.any(time()- np.stack(trajectory[:, 4], axis=0)> self.batch_age_limit)
             rews = self.rewards.compute(states, self.trained[individual_index].get_reward_shape())[:, :, np.newaxis]
 
             states *= GameState.scales
 
             if not is_old :
                 # Train
+                self.logger.debug('train!')
                 with tf.summary.record_if(self.train_cntr % self.write_summary_freq == 0):
                     self.trained[individual_index].train(states, actions, rews, probs, hidden_states, gpu=0)
 
                 self.trained[individual_index].data_used += self.batch_size * self.TRAJECTORY_LENGTH
+                return True
             else:
                 print('Experience too old !', individual_index, self.train_cntr)
+
+        return False
 
     def train_each(self):
         tf.summary.experimental.set_step(self.train_cntr)
         self.train_cntr += 1
 
+        success = False
         for index in self.individual_ids.values():
-            self.train(index)
+            success = success or self.train(index)
+
+        if success:
+            self.train_cntr += 1
 
         dt = time() - self.time
         if self.train_cntr % (self.write_summary_freq * 5) == 0:
@@ -140,7 +153,7 @@ class Trainer(Default, Logger):
                 for exp in self.exp:
                     total_waiting += len(exp)
 
-                if total_waiting>0:
+                if total_waiting > len(self.individual_ids) * self.batch_size:
                     self.logger.debug('exp waiting at Trainer %d : %d' % (self.id, total_waiting))
 
     def __call__(self):

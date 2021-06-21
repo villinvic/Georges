@@ -8,6 +8,7 @@ from time import time, sleep
 from subprocess import Popen
 import numpy as np
 from socket import gethostname, gethostbyname
+import datetime
 
 
 from config.loader import Default
@@ -28,6 +29,8 @@ class Hub(Default, Logger):
         self.population.initialize()
         self.logger.info(self.population)
         self.trainers = [None] * self.N_TRAINERS
+
+        self.running_instance_identifier = datetime.datetime.now().strftime("Georges_%Y-%m-%d_%H-%M")
 
         # read config for ports
         # socket for sending matches or starting training session modes
@@ -156,7 +159,7 @@ class Hub(Default, Logger):
 
     def start_trainers(self):
         # id, ip, individual_ids
-        cmd = "python3 training/trainer.py --ID=%d --ip=%s --individual_ids=%s"
+        cmd = "python3 training/trainer.py --ID=%d --ip=%s --individual_ids=%s --instance_id=%s"
         if self.POP_SIZE % self.N_TRAINERS != 0:
             print('POP_SIZE', self.POP_SIZE, 'is not a multiple of N_TRAINERS', self.N_TRAINERS)
             print('N_TRAINERS must divide POP_SIZE for optimal and fair GPU usage.')
@@ -164,7 +167,8 @@ class Hub(Default, Logger):
 
         for ID in range(self.N_TRAINERS):
             individual_ids = list(range(ID*self.POP_SIZE // self.N_TRAINERS, (1+ID)*self.POP_SIZE // self.N_TRAINERS))
-            self.trainers[ID] = Popen((cmd % (ID, self.ip, str(individual_ids).replace(" ", ""))).split(),
+            self.trainers[ID] = Popen((cmd % (ID, self.ip, str(individual_ids).replace(" ", ""),
+                                              self.running_instance_identifier)).split(),
                                       env={'PYTHONPATH': os.getcwd()})
 
     def exit(self):
