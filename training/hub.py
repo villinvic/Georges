@@ -9,6 +9,8 @@ from subprocess import Popen
 import numpy as np
 from socket import gethostname, gethostbyname
 import datetime
+import pickle
+import matplotlib.pyplot as plt
 
 
 from config.loader import Default
@@ -123,7 +125,6 @@ class Hub(Default, Logger):
     def do_tournament(self):
         tournament = Tournament(self.POP_SIZE)
         for match in tournament():
-            self.update_population()
             tournament.step(*self.handle_actor_requests(tournament_match=match))
         winners = tournament.result()
         self.population.ranking()[0].inerit_from(*winners) # worst individual gets replaced by a crossover between the two winners
@@ -178,9 +179,47 @@ class Hub(Default, Logger):
         for trainer in self.trainers:
             trainer.wait()
 
+        self.save()
+
+    def save(self):
+        # save pop
+        self.logger.info('Retrieving latest versions of individuals from trainer...')
+        for _ in range(15):
+            self.update_population()
+            sleep(0.1)
+
+        self.logger.info('Saving population and parameters...')
+        ckpt_path = 'checkpoints/'+self.running_instance_identifier+'/'
+        if not os.path.exists(ckpt_path):
+            try:
+                os.makedirs(ckpt_path)
+            except OSError as exc:
+                print(exc)
+
+        with open(ckpt_path+'population_'+datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")+'.pkl', 'wb+') as f:
+            pickle.dump(self.population.to_serializable(), f)
+        # build diagram
+
+        ranking = self.population.ranking()
+        char_data = np.empty((len(ranking), 4), dtype=object)
+        for i, p in enumerate(ranking):
+            char_data[i][0] = p.name.get()
+            char_data[i][1] = p.genotype['type'].__repr__()
+            char_data[i][2] = str(p.elo())
+            char_data[i][3] = str(p.elo.n)
+            # winrate ?
+            # age ?
+            # icons ?
+
+        np.savetxt(ckpt_path+'population_table.csv', char_data, delimiter=",", fmt="%s")
+
+
+
+
     def __call__(self, *args, **kwargs):
         self.last_update_time = time()
         last_tournament_time = time()
+        last_save_time = time()
         self.start_trainers()
         sleep(15)
         self.publicate_population()
@@ -191,12 +230,18 @@ class Hub(Default, Logger):
                 self.evolve()
 
                 current = time()
-                if current - self.last_update_time > self.pop_update_freq:
+                if current - self.last_update_time > self.pop_update_freq_minutes*60:
+                    current = self.last_update_time
                     self.update_population()
 
                 if current - last_tournament_time > self.tournament_freq_minutes*60:
                     last_tournament_time = current
                     self.do_tournament()
+
+                if current - last_save_time > self.save_time_freq_minutes*60:
+                    last_save_time = current
+                    self.save()
+
 
         except KeyboardInterrupt:
             pass

@@ -52,4 +52,6 @@ class Default:
 
         super(Default, self).__init__()
 
+        del self.config
+
 

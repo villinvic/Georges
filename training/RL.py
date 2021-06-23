@@ -8,11 +8,6 @@ from copy import deepcopy
 from config.loader import Default
 from game.state import PlayerState
 
-gpus = tf.config.experimental.list_physical_devices('GPU')
-N_GPUS = len(gpus)
-for gpu in gpus:
-    tf.config.experimental.set_memory_growth(gpu, True)
-
 class Distribution(object):
     def __init__(self, dim):
         self._dim = dim

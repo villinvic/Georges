@@ -25,19 +25,25 @@ class DolphinInstance(Default):
         self.lock = filelock.FileLock(config_path+'.lock')
 
     def run(self, *players):
+
         enabled = codes.demo if self.test else codes.training
+
         game_config = codes.GALE01_ini_template.format(match_code=generate_match_code(*players, stage=self.stage),
 
                                                  enabled='\n'.join(enabled))
+
         cmd = r'%s --exec=%s --id=%d' \
               % (self.exe_path, self.iso_path, self.id)
         if not self.test:
             cmd += ' --platform=headless'
+
         with self.lock :
             with open(self.config_path, 'w') as gconfigfile:
                 gconfigfile.write(game_config)
+
             self.proc = Popen(cmd.split(), start_new_session=True)
             sleep(0.2)
+
 
     def close(self):
         try:

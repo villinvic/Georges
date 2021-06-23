@@ -21,13 +21,24 @@ class Trainer(Default, Logger):
     def __init__(self, ID=0, ip='', individual_ids=[], instance_id='Georges_'):
         super(Trainer, self).__init__()
 
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(ID)
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+        gpus = tf.config.experimental.list_physical_devices('GPU')
+        N_GPUS = len(gpus)
+        print(gpus)
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+
+        self.gpu_id = 0 if ID < N_GPUS else -1
+
+
         log_dir = 'logs/' + instance_id + '/train_' + str(ID)
         self.writer = tf.summary.create_file_writer(log_dir)
         self.writer.set_as_default()
         #==============================================================#
 
         self.rewards = Rewards(self.batch_size, self.TRAJECTORY_LENGTH)
-        self.id = self.gpu_id = ID
+        self.id = ID
         self.ip = ip
         self.individual_ids = {individual_id : i for i, individual_id in enumerate(individual_ids)}
 
@@ -122,7 +133,7 @@ class Trainer(Default, Logger):
                 # Train
                 self.logger.debug('train!')
                 with tf.summary.record_if(self.train_cntr % self.write_summary_freq == 0):
-                    self.trained[individual_index].train(states, actions, rews, probs, hidden_states, gpu=0)
+                    self.trained[individual_index].train(states, actions, rews, probs, hidden_states, 0)
 
                 self.trained[individual_index].data_used += self.batch_size * self.TRAJECTORY_LENGTH
                 return True
@@ -196,6 +207,8 @@ class Trainer(Default, Logger):
             self.param_socket.unbind("tcp://%s:%d" % (self.ip, self.param_port))
         except zmq.ZMQError as e:
             pass
+
+        self.update_hub()
 
         self.logger.info('Trainer %d exited.' % self.id)
         sys.exit(0)

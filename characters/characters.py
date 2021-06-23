@@ -55,6 +55,7 @@ class Character:
 class Mario(Character):
 
     id = Char.Mario
+    ico = 'icons/mario.png'
 
     frame_data = {'AppealL'                : 0.0,
           'AppealR'                : 0.0,
@@ -452,6 +453,8 @@ class Mario(Character):
 
 class Doc(Character):
     id = Char.Doc
+    ico = 'icons/doc.png'
+
     frame_data = {'AppealL'                : 0.0,
           'AppealR'                : 0.0,
           'AppealS'                : 0.0,
@@ -850,6 +853,8 @@ class Doc(Character):
 
 class Luigi(Character):
     id = Char.Luigi
+    ico = 'icons/luigi.png'
+
     frame_data = {'AppealL'                : 0.0,
           'AppealR'                : 0.0,
           'AppealS'                : 0.0,
@@ -1248,6 +1253,8 @@ class Luigi(Character):
 
 class Falcon(Character):
     id = Char.Falcon
+    ico = 'icons/falcon.png'
+
     frame_data = {'AppealL'                : 0.0,
           'AppealR'                : 0.0,
           'AppealS'                : 0.0,
@@ -1646,6 +1653,8 @@ class Falcon(Character):
 
 class Ganon(Character):
     id = Char.Ganon
+    ico = 'icons/ganon.png'
+
     frame_data = {'AppealL'                : 0.0,
           'AppealR'                : 0.0,
           'AppealS'                : 0.0,
@@ -2044,6 +2053,8 @@ class Ganon(Character):
 
 class Fox(Character):
     id = Char.Fox
+    ico = 'icons/fox.png'
+
     frame_data = {'AppealL'                : 0.0,
           'AppealR'                : 0.0,
           'AppealS'                : 0.0,
@@ -2441,6 +2452,8 @@ class Fox(Character):
 
 class Falco(Character):
     id = Char.Falco
+    ico = 'icons/falco.png'
+
     frame_data = {'AppealL'                : 0.0,
           'AppealR'                : 0.0,
           'AppealS'                : 0.0,
@@ -2838,6 +2851,8 @@ class Falco(Character):
 
 class Marth(Character):
     id = Char.Marth
+    ico = 'icons/marth.png'
+
     frame_data= {'AppealL'                : 0.0,
           'AppealR'                : 0.0,
           'AppealS'                : 0.0,
@@ -3236,6 +3251,8 @@ class Marth(Character):
 
 class Roy(Character):
     id = Char.Roy
+    ico = 'icons/roy.png'
+
     frame_data = {'AppealL'                : 0.0,
           'AppealR'                : 119.0,
           'AppealS'                : 0.0,
