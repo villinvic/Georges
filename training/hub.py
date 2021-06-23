@@ -201,12 +201,13 @@ class Hub(Default, Logger):
         # build diagram
 
         ranking = self.population.ranking()
-        char_data = np.empty((len(ranking), 4), dtype=object)
+        char_data = np.empty((len(ranking)+1, 4), dtype=object)
+        char_data[0, :] = 'Player tag', 'Main', 'Elo', 'Games played'
         for i, p in enumerate(ranking):
-            char_data[i][0] = p.name.get()
-            char_data[i][1] = p.genotype['type'].__repr__()
-            char_data[i][2] = str(p.elo())
-            char_data[i][3] = str(p.elo.n)
+            char_data[i+1][0] = p.name.get()
+            char_data[i+1][1] = p.genotype['type'].__repr__()
+            char_data[i+1][2] = str(p.elo())
+            char_data[i+1][3] = str(p.elo.n)
             # winrate ?
             # age ?
             # icons ?
