@@ -15,11 +15,12 @@ class Individual:
                  is_cpu=False,
                  name=None,
                  test=False,
+                 trainable=False
                  ):
 
         self.id = ID
         self.type = PlayerType.CPU if is_cpu else PlayerType.Human
-        self.genotype = Genotype(GameState.size, char, is_dummy=is_cpu or test)
+        self.genotype = Genotype(GameState.size, char, trainable, is_dummy=is_cpu or test)
         self.elo = Elo(locked=is_cpu)
         self.name = Name(name)
         self.data_used = 0
@@ -56,11 +57,11 @@ class Individual:
     def set_genes(self, new_genes):
         self.genotype.set_params(new_genes)
 
-    def get_all(self):
+    def get_all(self, trainable=True):
         return dict(
             id=self.id,
             type=self.type,
-            genotype=self.genotype.get_params(),
+            genotype=self.genotype.get_params(trainable=trainable),
             elo=self.elo,
             name=self.name,
             data_used=self.data_used,
@@ -68,15 +69,17 @@ class Individual:
             birthday=self.birthday
         )
 
-    def set_all(self, params, check_age=False):
+    def set_all(self, params, check_age=False, trainable=True):
         if not check_age or params['birthday'] >= self.birthday:
-            self.type = params['type']
-            self.genotype.set_params(params['genotype'])
-            self.elo = params['elo']
-            self.name = params['name']
+            if not check_age:
+                self.type = params['type']
+                self.elo = params['elo']
+                self.name = params['name']
+                self.birthday = params['birthday']
+            self.genotype.set_params(params['genotype'], trainable)
             self.data_used = params['data_used']
             self.mean_entropy = params['mean_entropy']
-            self.birthday = params['birthday']
+
         else:
             print('Tried to override an individual with older params')
 
@@ -94,7 +97,8 @@ class Individual:
             self.genotype.set_params(other_individuals[0].genotype.get_params())
             self.name.inerit_from(other_individuals[0].name)
         elif len(other_individuals) == 2:
-            self.genotype.set_params(other_individuals[0].genotype.crossover(other_individuals[1].genotype))
+            self.genotype.set_params(other_individuals[0].genotype.crossover(other_individuals[1].genotype),
+                                     trainable=True)
             self.name.inerit_from(other_individuals[0].name, other_individuals[1].name)
 
         self.elo = Elo()  # reset
@@ -123,6 +127,7 @@ class Trainable(Individual):
         super(Trainable, self).__init__(ID, char, is_cpu, name, test)
 
     # redefine arena genes methods (AC class and Policy class)
+
 
     def train(self):
         # load individual params when training

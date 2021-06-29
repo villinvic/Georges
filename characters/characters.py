@@ -3663,3 +3663,15 @@ enum2index = {
       Char.Marth: 7,
       Char.Roy: 8,
 }
+
+string2char = {
+      'Fox':Fox,
+       'Falco': Falco,
+       'Luigi': Luigi,
+       'Ganon': Ganon,
+       'Marth': Marth,
+       'Roy': Roy,
+       'Falcon': Falcon,
+       'Mario': Mario,
+       'Doc': Doc
+}

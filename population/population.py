@@ -1,6 +1,6 @@
 import numpy as np
 
-from population.individual import Individual, Trainable
+from population.individual import Individual
 from characters import characters
 
 
@@ -37,19 +37,18 @@ class Population:
         else:
             raise StopIteration
 
-    def initialize(self, individual_ids=None, trainable=False):
-        individual_cls = Trainable if trainable else Individual
+    def initialize(self, individual_ids=None, trainable=False, reference_name="20XX", reference_char=characters.Fox):
 
         if individual_ids is None:
             np.random.shuffle(characters.start_chars)
             n_chars = len(characters.start_chars)
             for ID in range(self.size):
-                self.individuals[ID] = individual_cls(ID, characters.start_chars[ID % n_chars])
+                self.individuals[ID] = Individual(ID, characters.start_chars[ID % n_chars], trainable=trainable)
             for ID_reference in range(self.size, self.total_size):
-                self.individuals[ID_reference] = Individual(ID_reference, characters.Fox, is_cpu=True, name='20XX')
+                self.individuals[ID_reference] = Individual(ID_reference, reference_char, is_cpu=True, name=reference_name)
         else:
             for index, ID in enumerate(individual_ids):
-                self.individuals[index] = individual_cls(ID, characters.Character)
+                self.individuals[index] = Individual(ID, characters.Character, trainable=trainable)
 
     def __repr__(self):
         return self.individuals.__repr__()

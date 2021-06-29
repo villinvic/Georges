@@ -56,10 +56,12 @@ class Name:
         'MarioMario',
         'MarioLuigi',
         'DontTestMe',
-        '4ParralelUniversesAheadOfU',
+        'BossTheme',
+        'FD is lame',
         'How to wavedash',
         'ElephantBoi',
         'I am nott goude',
+        'not a Fox main',
 
         'Georges'
     ])

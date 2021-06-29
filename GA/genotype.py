@@ -3,8 +3,7 @@ import numpy as np
 from config.loader import Default
 from GA import misc
 from characters.characters import Mario, available_chars, enum2index
-from training.RL import Policy
-from tensorflow.keras.layers import Dense, LSTM
+from training.RL import Policy, AC
 from collections import deque
 from copy import deepcopy
 
@@ -20,7 +19,7 @@ class Genotype(Default):
         'brain'
     ]
 
-    def __init__(self, state_dim, initial_char = Mario, is_dummy=False):
+    def __init__(self, state_dim, initial_char = Mario, trainable=False, is_dummy=False):
         super(Genotype, self).__init__()
         self.is_dummy = is_dummy
         self.layer_dims = []
@@ -46,8 +45,9 @@ class Genotype(Default):
             # get rid of the panda data
             del self.brain_model
 
+            Brain_cls = AC if trainable else Policy
             self._genes = {
-                'brain': Policy(initial_char.action_space.dim, self.layer_dims, self.lstm_dim), # brain function (must have a __call__ and perturb function) Usually an NN
+                'brain': Brain_cls(initial_char.action_space.dim, self.layer_dims, self.lstm_dim), # brain function (must have a __call__ and perturb function) Usually an NN
                 'learning': LearningParams(),
                 'experience': RewardShape(),
                 'type': EvolvingCharacter(initial_char),
@@ -61,20 +61,25 @@ class Genotype(Default):
                 if gene_family is not None:
                     gene_family.perturb()
 
-    def get_params(self, full_brain=False):
+    def get_params(self, full_brain=False, trainable=False):
         if full_brain:
             c = {'brain': self._genes['brain']}
+        elif trainable:
+            c= {'brain': self._genes['brain'].get_training_params()}
         else:
-            c= {'brain': self._genes['brain'].get_params()}
+            c = {'brain': self._genes['brain'].get_params()}
 
         c.update({key: self._genes[key].copy() for key in self._base_keys})
 
         return c
 
-    def set_params(self, new_genes):
+    def set_params(self, new_genes, trainable=False):
         for key in self._base_keys:
             self._genes[key] = new_genes[key]
-        self._genes['brain'].set_params(new_genes['brain'])
+        if trainable:
+            self._genes['brain'].set_training_params(new_genes['brain'])
+        else:
+            self._genes['brain'].set_params(new_genes['brain'])
 
     def __repr__(self):
         return self._genes.__repr__()
@@ -91,7 +96,7 @@ class Genotype(Default):
             if gene_family is not None:
                 gene_family.crossover(other_gene_family)
 
-        genes['brain'] = genes['brain'].get_params()
+        genes['brain'] = genes['brain'].get_training_params()
 
         return genes
 

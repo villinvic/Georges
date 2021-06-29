@@ -42,7 +42,7 @@ class DolphinInstance(Default):
                 gconfigfile.write(game_config)
 
             self.proc = Popen(cmd.split(), start_new_session=True)
-            sleep(0.2)
+            sleep(0.5)
 
 
     def close(self):

@@ -615,6 +615,7 @@ class GameState:
         self.manager.handle(updated_ram)
 
         for _ in range(amount):
+
             last_frame = self.frame
             while last_frame == self.frame:
                 updated_ram = next(self.mw)

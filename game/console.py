@@ -26,8 +26,10 @@ class Console:
         self.state.mw.bind()
         self.players.attribute_individuals(individuals)
         self.state.update_players(individuals)
-        self.dolphin.run(*self.players)
         self.players.connect_pads()
+        self.dolphin.run(*self.players)
+        sleep(5)
+
 
 
 
@@ -62,7 +64,7 @@ if __name__ == '__main__':
     players = [Individual(i, char, False, test=True) for i, char in enumerate(np.random.choice(available_chars, 4))]
 
     try:
-        for _ in range(2):
+        for _ in range(100):
             c.play_game(*players)
     except KeyboardInterrupt:
         c.dolphin.close()

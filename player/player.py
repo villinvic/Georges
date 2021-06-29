@@ -124,8 +124,8 @@ class PlayerGroup:
             self.t[i] = threading.Thread(target=self.players[i].pad.connect)
             self.t[i].start()
 
-        for i in range(self.size):
-            self.t[i].join()
+        #for i in range(self.size):
+        #    self.t[i].join()
 
     def disconnect_pads(self):
         for p in self.players:

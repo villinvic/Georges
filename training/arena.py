@@ -14,6 +14,7 @@ from logger.logger import Logger
 from game.console import Console
 from population.individual import Individual
 from characters import characters
+from game.enums import PlayerType
 
 
 class Arena(Default, Logger):
@@ -21,7 +22,7 @@ class Arena(Default, Logger):
                  hub_ip=None,
                  ID=0,
                  mw_path='dolphin/User/MemoryWatcher',
-                 test=True,
+                 test=False,
                  exe_path='dolphin/dolphin-emu-nogui-id',
                  iso_path='../isos/game.iso',
 
@@ -79,11 +80,18 @@ class Arena(Default, Logger):
 
     def update_players(self, player_ids):
 
+        successes = np.full(4, False)
         for i, p in enumerate(player_ids):
-            self.players[i].link(p)
+            if p < self.POP_SIZE:
+                self.players[i].link(p)
+            else:
+                self.players[i].type = PlayerType.CPU
+                self.players[i].name._name = self.REFERENCE_NAME
+                self.players[i].genotype['type']._character = characters.string2char[self.REFERENCE_CHAR]
+                successes[i] = True
 
         tries = 0
-        successes = np.full(4, False)
+
         while not np.all(successes):
             for i, player in enumerate(self.players):
                 if not successes[i]:
@@ -98,10 +106,6 @@ class Arena(Default, Logger):
         try:
             self.match_socket.send_pyobj(last_match_result)
             match_type, new_player_ids = self.match_socket.recv_pyobj()
-            self.logger.debug(match_type)
-            for i in range(len(new_player_ids)):
-                if new_player_ids[i] == 28:
-                    new_player_ids[i] = 15
             self.update_players(new_player_ids)
             if self.obs_streaming:
                 self.update_stream_info(new_player_ids)
@@ -123,8 +127,13 @@ class Arena(Default, Logger):
         player_ids = (None, None, None, None)
         while not self.exited:
 
+            self.logger.debug('Arena %d requesting Match...' % self.id)
             match_type, player_ids = self.request_match((match_type, (*player_ids, last_match_result)))
-            last_match_result = self.play_game()
+            if not self.exited:
+                self.logger.debug('Arena %d received match : [%d,%d]vs[%d,%d]' % (self.id, *player_ids))
+                last_match_result = self.play_game()
+
+        sys.exit(0)
 
 
     def exit(self, frame, sig):
@@ -141,7 +150,7 @@ class Arena(Default, Logger):
             pass
 
         for i, player_id in enumerate(player_ids):
-            comment = "[%s](%d)" % (self.population[player_id].name.get(),
+            comment = "[%s](%.0f)" % (self.population[player_id].name.get(),
                                     self.population[player_id].elo())
             with open(self.stream_path.format(player_index=i), 'w+') as f:
                 f.write(comment)

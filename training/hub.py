@@ -17,6 +17,7 @@ from config.loader import Default
 from logger.logger import Logger
 from GA.tournament import Tournament
 from population.population import Population
+from characters.characters import string2char
 
 
 class Hub(Default, Logger):
@@ -28,7 +29,7 @@ class Hub(Default, Logger):
         self.population = Population(self.POP_SIZE)
         # Load checkpoint if specified...
         self.logger.info('Population Initialization started...')
-        self.population.initialize()
+        self.population.initialize(trainable=True, reference_char=string2char[self.REFERENCE_CHAR], reference_name=self.REFERENCE_NAME)
         self.logger.info(self.population)
         self.trainers = [None] * self.N_TRAINERS
 
@@ -80,12 +81,14 @@ class Hub(Default, Logger):
 
     def update_elos(self, p0, p1, p2, p3, result):
         mean_team1 = (self.population[p0].elo() + self.population[p1].elo()) / 2.
-        mean_team2 = (self.population[p1].elo() + self.population[p2].elo()) / 2.
+        mean_team2 = (self.population[p2].elo() + self.population[p3].elo()) / 2.
 
         self.population[p0].elo.update(mean_team1, mean_team2, result)
         self.population[p1].elo.update(mean_team1, mean_team2, result)
         self.population[p2].elo.update(mean_team2, mean_team1, 1 - result)
         self.population[p3].elo.update(mean_team2, mean_team1, 1 - result)
+
+        print(self.population[p1].elo())
 
 
     def publicate_population(self):
@@ -203,10 +206,10 @@ class Hub(Default, Logger):
         ranking = self.population.ranking()
         char_data = np.empty((len(ranking)+1, 4), dtype=object)
         char_data[0, :] = 'Player tag', 'Main', 'Elo', 'Games played'
-        for i, p in enumerate(ranking):
+        for i, p in enumerate(reversed(ranking)):
             char_data[i+1][0] = p.name.get()
             char_data[i+1][1] = p.genotype['type'].__repr__()
-            char_data[i+1][2] = str(p.elo())
+            char_data[i+1][2] = "%.0f" % p.elo()
             char_data[i+1][3] = str(p.elo.n)
             # winrate ?
             # age ?

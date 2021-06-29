@@ -4,6 +4,7 @@ from input.action_space import ControllerState
 
 import zmq
 import os
+import filelock
 import platform
 
 
@@ -18,8 +19,10 @@ class Pad(Default):
         self.path = path + '_' + str(player_id)
         self.windows = port is not None
         self.port = port
+        self.player_id = player_id
         self.message = ""
         self.action_space = []
+        self.lock = filelock.FileLock(path + 'lock_%d.lock' % player_id)
 
         self.previous_state = ControllerState()
 
@@ -34,19 +37,24 @@ class Pad(Default):
             print("Binding pad %s to address %s" % (self.path, address))
             self.pipe.bind(address)
         else:
-            try:
-                os.unlink(self.path)
-            except:
-                pass
+            with self.lock:
+                try:
+                    os.unlink(self.path)
+                except:
+                    pass
 
-            os.mkfifo(self.path)
+                os.mkfifo(self.path)
 
-            self.pipe = open(self.path, 'w', buffering=1)
+                self.pipe = open(self.path, 'w', buffering=1)
 
     def unbind(self):
         if not self.windows:
             self.pipe.close()
-            os.unlink(self.path)
+            try:
+                pass
+                #os.unlink(self.path)
+            except Exception:
+                pass
 
         self.message = ""
 
