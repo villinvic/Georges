@@ -127,8 +127,6 @@ class Trainer(Default, Logger):
             is_old = np.any(time()- np.stack(trajectory[:, 4], axis=0)> self.batch_age_limit)
             rews = self.rewards.compute(states, self.trained[individual_index].get_reward_shape())
 
-            states *= GameState.scales
-
             if not is_old :
                 # Train
                 self.logger.debug('train!')

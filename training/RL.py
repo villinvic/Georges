@@ -313,7 +313,7 @@ class AC(tf.keras.Model, Default):
         tf.summary.scalar(name=log_name + "/max_logp", data=max_logp)
         tf.summary.scalar(name=log_name + "/grad_norm", data=grad_norm)
         #tf.summary.scalar(name="misc/distance", data=tf.reduce_mean(states[:, :, -1]))
-        tf.summary.scalar(name=log_name + "/reward", data=tf.reduce_mean(rewards))
+        tf.summary.scalar(name=log_name + "/reward", data=tf.reduce_sum(rewards))
 
 
     @tf.function

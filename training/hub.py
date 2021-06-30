@@ -213,6 +213,8 @@ class Hub(Default, Logger):
             char_data[i+1][3] = str(p.elo.n)
             # winrate ?
             # age ?
+            # lineage prestige
+            # prestige
             # icons ?
 
         np.savetxt(ckpt_path+'population_table.csv', char_data, delimiter=",", fmt="%s")
