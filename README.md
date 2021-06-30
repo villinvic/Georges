@@ -1,6 +1,6 @@
 # GEORGES
 
-###Generating Evolutionary Opponents as a Reinforcement Guided Exploration Solution
+### Generating Evolutionary Opponents as a Reinforcement Guided Exploration Solution
 
 GEORGES experimentation on Super Smash Bros Melee , in  a 2 vs 2 official 
 competition standard.
