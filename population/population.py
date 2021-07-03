@@ -1,4 +1,7 @@
 import numpy as np
+import pickle
+import json
+import os
 
 from population.individual import Individual
 from characters import characters
@@ -11,6 +14,7 @@ class Population:
         self.size = size
         self.n_reference = n_reference
         self.total_size = n_reference+self.size
+        self.checkpoint_index = 0
         self.n = 0
 
         self.to_serializable_v = np.vectorize(lambda individual: individual.get_all())
@@ -60,7 +64,40 @@ class Population:
         self.read_pickled_v(self.individuals[:self.size], params)
 
     def save(self, path):
-        pass
+        for individual in self:
+            with open(path + individual.name.get() + '.pkl',
+                      'wb+') as f:
+                pickle.dump(individual.get_all(), f)
+
+        with open(path + 'population.params', 'w') as json_file:
+            json.dump({
+            "size": int(self.size),
+            "n_reference": int(self.n_reference),
+            "checkpoint_index": int(self.checkpoint_index),
+        }, json_file)
+
+    def load(self, path):
+        if path[-1] != '/':
+            path += '/'
+        _, _, ckpts = next(os.walk(path))
+        pop_index = 0
+        for ckpt in ckpts:
+            if '.pkl' in ckpt:
+                try:
+                    with open(path + ckpt, 'rb') as f:
+                        self[pop_index].set_all(pickle.load(f))
+                except Exception as e:
+                    print(e)
+                pop_index += 1
+        try:
+            with open(path + 'population.params',
+                      'r') as json_file:
+                params = json.load(json_file)
+            for param_name, value in params.items():
+                setattr(self, param_name, value)
+            self.checkpoint_index += 1
+        except Exception as e:
+            print(e)
 
 
 

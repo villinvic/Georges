@@ -2,8 +2,8 @@
 
 ### Generating Evolutionary Opponents as a Reinforcement Guided Exploration Solution
 
-GEORGES experimentation on Super Smash Bros Melee , in  a 2 vs 2 official 
-competition standard.
+GEORGES experimentation on Super Smash Bros Melee , in 2 vs 2 official 
+competition standards.
 
 ### Description
 
@@ -42,3 +42,10 @@ TBA
 **[2]** Jaderberg, Max, Wojciech M. Czarnecki, Iain Dunning, Luke Marris, Guy Lever, Antonio Garcia Castañeda, Charles Beattie, et al. “Human-Level Performance in 3D Multiplayer Games with Population-Based Reinforcement Learning.” Science 364, no. 6443 (May 31, 2019): 859–65. https://doi.org/10.1126/science.aau6249.
 
 **[3]** Espeholt, Lasse, Hubert Soyer, Remi Munos, Karen Simonyan, Volodymir Mnih, Tom Ward, Yotam Doron, et al. “IMPALA: Scalable Distributed Deep-RL with Importance Weighted Actor-Learner Architectures.” ArXiv:1802.01561 [Cs], June 28, 2018. http://arxiv.org/abs/1802.01561.
+
+
+#### Further notes
+
+cf. Original zmq-exi Dolphin for speedhacking, by [Vladfi1](https://github.com/vladfi1/dolphin/tree/new-zmq-exi).
+
+cf. [p3](https://github.com/spxtr/p3) for Original Dolphin<=>Python communication system.

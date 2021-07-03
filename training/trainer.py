@@ -44,7 +44,6 @@ class Trainer(Default, Logger):
         self.individual_ids = {individual_id : i for i, individual_id in enumerate(individual_ids)}
 
         self.trained = Population(len(individual_ids), n_reference=0)
-        self.trained.initialize(individual_ids=individual_ids, trainable=True)
 
         self.param_port = self.PARAM_PORT_BASE + ID
         self.exp_port = self.EXP_PORT_BASE + ID
@@ -69,6 +68,8 @@ class Trainer(Default, Logger):
         self.time = time()
 
         signal.signal(signal.SIGINT, self.exit)
+
+        self.trained.initialize(individual_ids=individual_ids, trainable=True)
 
         self.logger.info('Trainer %d bound to ports (%d, %d) initialized' % (self.id, self.param_port, self.exp_port))
 

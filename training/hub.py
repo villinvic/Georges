@@ -21,19 +21,23 @@ from characters.characters import string2char
 
 
 class Hub(Default, Logger):
-    def __init__(self, is_localhost=False):
+    def __init__(self, is_localhost=False, ckpt=""):
         super(Hub, self).__init__()
 
         self.ip = '127.0.0.1' if is_localhost else gethostbyname(gethostname())
+        self.running_instance_identifier = datetime.datetime.now().strftime("Georges_%Y-%m-%d_%H-%M")
 
         self.population = Population(self.POP_SIZE)
         # Load checkpoint if specified...
         self.logger.info('Population Initialization started...')
         self.population.initialize(trainable=True, reference_char=string2char[self.REFERENCE_CHAR], reference_name=self.REFERENCE_NAME)
+        if ckpt:
+            self.load(ckpt)
+
         self.logger.info(self.population)
         self.trainers = [None] * self.N_TRAINERS
 
-        self.running_instance_identifier = datetime.datetime.now().strftime("Georges_%Y-%m-%d_%H-%M")
+
 
         # read config for ports
         # socket for sending matches or starting training session modes
@@ -126,12 +130,23 @@ class Hub(Default, Logger):
         return p0, *other_players
 
     def do_tournament(self):
+        self.logger.info('--Starting Tournament--')
         tournament = Tournament(self.POP_SIZE)
         for match in tournament():
-            tournament.step(*self.handle_actor_requests(tournament_match=match))
-        winners = tournament.result()
-        self.population.ranking()[0].inerit_from(*winners) # worst individual gets replaced by a crossover between the two winners
-        self.trainer_PUB.send_pyobj([self.population.ranking()[0].get_all()])
+            type, msg = self.handle_actor_requests(tournament_match=match)
+            if msg is not None:
+                tournament.step(type, *msg)
+                self.update_population()
+        w1, w2 = tournament.result()
+        self.logger.info('-- Tournament winners --')
+        self.logger.info(self.population[w1])
+        self.logger.info(self.population[w2])
+        self.population[w1].tournaments_won += 1
+        self.population[w2].tournaments_won += 1
+
+        worst_individual = self.population.ranking()[0]
+        worst_individual.inerit_from(self.population[w1], self.population[w2]) # worst individual gets replaced by a crossover between the two winners
+        self.trainer_PUB.send_pyobj([worst_individual.get_all()])
 
     def evolve(self):
         evolved = []
@@ -184,6 +199,15 @@ class Hub(Default, Logger):
 
         self.save()
 
+    def load(self, ckpt_path):
+        self.logger.info("Loading checkpoint %s ..." % ckpt_path)
+        self.population.load(ckpt_path)
+
+        path_dirs = ckpt_path.split('/')
+        for dir in path_dirs:
+            if 'Georges' in dir:
+                self.running_instance_identifier = dir
+
     def save(self):
         # save pop
         self.logger.info('Retrieving latest versions of individuals from trainer...')
@@ -193,25 +217,40 @@ class Hub(Default, Logger):
 
         self.logger.info('Saving population and parameters...')
         ckpt_path = 'checkpoints/'+self.running_instance_identifier+'/'
-        if not os.path.exists(ckpt_path):
+        full_path = ckpt_path + 'ckpt_' + str(self.population.checkpoint_index) + '/'
+        if not os.path.exists(full_path):
             try:
-                os.makedirs(ckpt_path)
+                os.makedirs(full_path)
             except OSError as exc:
                 print(exc)
 
-        with open(ckpt_path+'population_'+datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")+'.pkl', 'wb+') as f:
-            pickle.dump(self.population.to_serializable(), f)
+        self.population.save(full_path)
+
+        _, dirs, _ = next(os.walk(ckpt_path))
+        if len(dirs) > self.ckpt_keep:
+            oldest = sorted(dirs)[0]
+            _, _, files = next(os.walk(ckpt_path+oldest))
+            for f in files:
+                if '.pkl' in f or '.params' in f:
+                    os.remove(ckpt_path+oldest+'/'+f)
+            try:
+                os.rmdir(ckpt_path+oldest)
+            except Exception:
+                self.logger.warning("Tried to delete a non empty checkpoint directory")
         # build diagram
 
         ranking = self.population.ranking()
-        char_data = np.empty((len(ranking)+1, 4), dtype=object)
-        char_data[0, :] = 'Player tag', 'Main', 'Elo', 'Games played'
+        cols = 'Player tag', 'Main', 'Elo', 'Games played', 'Tournaments won', 'Lineage prestige'
+        char_data = np.empty((len(ranking)+1, len(cols)), dtype=object)
+        char_data[0, :] = cols
         for i, p in enumerate(reversed(ranking)):
             char_data[i+1][0] = p.name.get()
             char_data[i+1][1] = p.genotype['type'].__repr__()
             char_data[i+1][2] = "%.0f" % p.elo()
-            char_data[i+1][3] = str(p.elo.n)
-            # winrate ?
+            char_data[i+1][3] = str(p.elo.games_played)
+            char_data[i+1][4] = str(p.tournaments_won)
+            char_data[i+1][5] = str(p.lineage_prestige)
+
             # age ?
             # lineage prestige
             # prestige
@@ -227,7 +266,7 @@ class Hub(Default, Logger):
         last_tournament_time = time()
         last_save_time = time()
         self.start_trainers()
-        sleep(15)
+        sleep(5)
         self.publicate_population()
 
         try:

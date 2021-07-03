@@ -114,6 +114,8 @@ class StateManager:
             # item_address =
 
     def handle(self, messages):
+        if messages == -1 :
+            return
         for address, value in messages:
             """Convert the raw address and value into changes in the State."""
             if address in self.addresses:

@@ -12,7 +12,7 @@ class Logger:
 
         handler = logging.StreamHandler()
         handler.setFormatter(formatter)
-        logger = logging.getLogger('')
+        logger = logging.getLogger(self.__class__.__name__)
         if not hasattr(self, 'LOGLEVEL'):
             print('Class that inerit from Logger must inerit from Default config class')
             raise AttributeError

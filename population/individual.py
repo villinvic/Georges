@@ -5,7 +5,7 @@ from game.enums import PlayerType
 from game.state import GameState
 
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class Individual:
@@ -26,6 +26,8 @@ class Individual:
         self.data_used = 0
         self.mean_entropy = np.log(char.action_space.dim)
         self.birthday = datetime.today()
+        self.lineage_prestige = 0
+        self.tournaments_won = 0
         # random policy
         # self.dist = np.ones(self.char.action_space.dim, dtype=np.float32) / self.char.action_space.dim
         # self.policy = lambda state: (np.random.choice(self.char.action_space.dim), self.dist)
@@ -66,16 +68,21 @@ class Individual:
             name=self.name,
             data_used=self.data_used,
             mean_entropy=self.mean_entropy,
-            birthday=self.birthday
+            birthday=self.birthday,
+            lineage_prestige=self.lineage_prestige,
+            tournaments_won=self.tournaments_won,
+
         )
 
     def set_all(self, params, check_age=False, trainable=True):
-        if not check_age or params['birthday'] >= self.birthday:
+        if not check_age or params['birthday'] >= self.birthday - timedelta(minutes=1):
             if not check_age:
                 self.type = params['type']
                 self.elo = params['elo']
                 self.name = params['name']
                 self.birthday = params['birthday']
+                self.lineage_prestige = params['lineage_prestige']
+                self.tournaments_won = params['tournaments_won']
             self.genotype.set_params(params['genotype'], trainable)
             self.data_used = params['data_used']
             self.mean_entropy = params['mean_entropy']
@@ -103,6 +110,10 @@ class Individual:
 
         self.elo = Elo()  # reset
         self.data_used = 0
+        self.tournaments_won = 0
+        self.lineage_prestige = 0
+        for parent in other_individuals:
+            self.lineage_prestige += parent.lineage_prestige + parent.tournaments_won
         self.birthday = datetime.today()
 
     def perturb(self):

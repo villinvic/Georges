@@ -3,9 +3,7 @@ import zmq
 import socket
 import os
 import platform
-
-from config.loader import Default
-
+import signal
 
 def chunk(l, n):
     return [l[i:i + n] for i in range(0, len(l), n)]
@@ -24,7 +22,7 @@ def parseMessage(message):
     return diffs
 
 
-class MemoryWatcherZMQ(Default):
+class MemoryWatcherZMQ:
     """Reads and parses game memory changes.
 
     Pass the location of the socket to the constructor, then either manually
@@ -38,21 +36,18 @@ class MemoryWatcherZMQ(Default):
         self.path = path + '/MemoryWatcher'
         self.id = ID
         self.messages = None
-        self.exited = False
         self.windows = platform.system() == 'Windows'
 
         # write_with_folder(self.path, '5555')
 
         context = zmq.Context()
-        self.alert_socket = context.socket(zmq.PUSH)
-        self.alert_socket.connect("tcp://127.0.0.1:%d" % self.MEMORYWATCHER_ALERT_PORT)
         if self.windows:
             self.socket = context.socket(zmq.PULL)
             self.socket.bind("tcp://127.0.0.1:%d" % 5555)
         else:
             self.socket = context.socket(zmq.REP)
             #self.socket.bind("ipc://" + self.path+str(self.id))
-            self.socket.setsockopt(zmq.RCVTIMEO, 10000)
+            self.socket.setsockopt(zmq.RCVTIMEO, 15000)
             self.socket.setsockopt(zmq.LINGER, 0)
 
     def __del__(self):
@@ -66,7 +61,10 @@ class MemoryWatcherZMQ(Default):
         self.socket.bind("ipc://" + self.path + str(self.id))
 
     def unbind(self):
-        self.socket.unbind("ipc://" + self.path + str(self.id))
+        try:
+            self.socket.unbind("ipc://" + self.path + str(self.id))
+        except zmq.ZMQError:
+            pass
 
 
     def __iter__(self):
@@ -89,8 +87,8 @@ class MemoryWatcherZMQ(Default):
                 message = message.decode('utf-8')
                 self.messages = parseMessage(message)
             except zmq.ZMQError as e:
-                if not self.exited:
-                    self.alert_socket.send_pyobj(self.id)
+                print(e)
+                return -1
 
         return self.messages
 

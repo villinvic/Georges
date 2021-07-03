@@ -3,6 +3,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 import numpy as np
 import zmq
+import zmq.ssh as zmq_ssh
 from time import sleep
 import signal
 import fire
@@ -21,15 +22,10 @@ class Arena(Default, Logger):
     def __init__(self,
                  hub_ip=None,
                  ID=0,
-                 mw_path='dolphin/User/MemoryWatcher',
                  test=False,
-                 exe_path='dolphin/dolphin-emu-nogui-id',
-                 iso_path='../isos/game.iso',
-
-                 obs_streaming=False
+                 obs_streaming=False,
+                 ssh="",
                  ):
-
-        print(hub_ip, ID, mw_path, test, exe_path, iso_path)
 
         super(Arena, self).__init__()
         self.id = ID
@@ -37,18 +33,24 @@ class Arena(Default, Logger):
         self.trainer_ip = self.hub_ip = hub_ip
 
         self.match_socket = self.zmq_context.socket(zmq.REQ)
-        self.match_socket.connect("tcp://%s:%d" % (self.hub_ip, self.MATCH_PORT))
+        if ssh:
+            zmq_ssh.tunnel_connection(self.match_socket, "tcp://%s:%d" % (self.hub_ip, self.MATCH_PORT),
+                                  "isys3@%s:%d" % (self.hub_ip, self.MATCH_PORT), password=ssh)
+        else:
+            self.match_socket.connect("tcp://%s:%d" % (self.hub_ip, self.MATCH_PORT))
+
         self.players = np.empty((4,), dtype=IndividualManager)
         for i in range(len(self.players)):
-            self.players[i] = IndividualManager(hub_ip, self.zmq_context)
+            self.players[i] = IndividualManager(hub_ip, ssh, self.zmq_context)
 
         self.console = Console(
             ID,
             self.TRAJECTORY_LENGTH,
-            mw_path,
+            self.mw_path,
+            self.exe_path,
+            self.iso_path,
+            self.pad_path,
             test,
-            exe_path,
-            iso_path
         )
 
         self.obs_streaming = obs_streaming
@@ -125,22 +127,24 @@ class Arena(Default, Logger):
         last_match_result = None
         match_type = None
         player_ids = (None, None, None, None)
-        while not self.exited:
+        while True:
 
             self.logger.debug('Arena %d requesting Match...' % self.id)
             match_type, player_ids = self.request_match((match_type, (*player_ids, last_match_result)))
-            if not self.exited:
+            if player_ids[0] is not None:
                 self.logger.debug('Arena %d received match : [%d,%d]vs[%d,%d]' % (self.id, *player_ids))
                 last_match_result = self.play_game()
+            else:
+                self.logger.debug('Weird exit')
+                break
 
-        sys.exit(0)
+        return 0
 
-
-    def exit(self, frame, sig):
+    def exit(self, *args):
         self.exited = True
         self.console.close()
         self.logger.info('Arena %d closed' % self.id)
-        sys.exit(0)
+        os.kill(os.getpid(), signal.SIGUSR1)
 
     # if we are streaming the arena
     def update_stream_info(self, player_ids):
@@ -158,7 +162,7 @@ class Arena(Default, Logger):
 
 
 class TrainerConnection(Default):
-    def __init__(self, individual_id, trainer_ip, zmq_c: zmq.Context):
+    def __init__(self, individual_id, trainer_ip, ssh, zmq_c: zmq.Context):
         super(TrainerConnection, self).__init__()
 
         self.individual_id = individual_id
@@ -169,8 +173,15 @@ class TrainerConnection(Default):
         self.param_socket = zmq_c.socket(zmq.SUB)
         self.exp_socket = zmq_c.socket(zmq.PUSH)
 
-        self.param_socket.connect("tcp://%s:%d" % (trainer_ip, self.param_port))
-        self.exp_socket.connect("tcp://%s:%d" % (trainer_ip, self.exp_port))
+        if ssh:
+            zmq_ssh.tunnel_connection(self.param_socket, "tcp://%s:%d" % (trainer_ip, self.param_port),
+                                      "isys3@%s:%d" % (trainer_ip, self.param_port), password=ssh)
+            zmq_ssh.tunnel_connection(self.exp_socket, "tcp://%s:%d" % (trainer_ip, self.exp_port),
+                                      "isys3@%s:%d" % (trainer_ip, self.exp_port), password=ssh)
+        else:
+            self.param_socket.connect("tcp://%s:%d" % (trainer_ip, self.param_port))
+            self.exp_socket.connect("tcp://%s:%d" % (trainer_ip, self.exp_port))
+
         self.param_socket.setsockopt(zmq.SUBSCRIBE, str(self.individual_id).encode())
 
     def send_exp(self, traj):
@@ -191,10 +202,11 @@ class TrainerConnection(Default):
 
 
 class IndividualManager(Individual):
-    def __init__(self, trainer_ip, zmq_c):
+    def __init__(self, trainer_ip, ssh, zmq_c):
         super(IndividualManager, self).__init__(-1, characters.Character)
         self.connection = None
         self.trainer_ip = trainer_ip
+        self.ssh = ssh
         self.zmq_c = zmq_c
 
     def link(self, individual_id):
@@ -202,12 +214,15 @@ class IndividualManager(Individual):
         if self.connection is not None:
             self.connection.close()
             del self.connection
-        self.connection = TrainerConnection(individual_id, self.trainer_ip, self.zmq_c)
+        self.connection = TrainerConnection(individual_id, self.trainer_ip, self.ssh, self.zmq_c)
 
     def close_connection(self):
         self.connection.close()
 
     def update_params(self):
+        if self.genotype['brain'] is not None:
+            if self.genotype['brain'].has_lstm:
+                self.genotype['brain'].lstm.reset_states()
         if self.connection is not None:
                 arena_genes = self.connection.recv_params()
                 if arena_genes is None:

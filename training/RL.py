@@ -236,10 +236,10 @@ class ActionStateProbs(tf.keras.Model):
 
     def __init__(self, name='action_state_probs'):
         super().__init__(name=name)
-        self.probs = tf.Variable(tf.fill([1, PlayerState.action_state_dim], 1./PlayerState.action_state_dim), dtype=tf.float32, constraint=softmax)
+        self.probs = tf.Variable(tf.fill([1, PlayerState.action_state_dim], 1.), dtype=tf.float32)
 
     def get(self):
-        return self.probs
+        return softmax(self.probs)
 
 
 class V(tf.keras.Model):
@@ -281,7 +281,7 @@ class AC(tf.keras.Model, Default):
         self.V = V(layer_dims)
         self.policy = CategoricalActor(action_dim, self.epsilon_greedy, layer_dims)
         self.as_probs = ActionStateProbs()
-        self.p_optim = tf.keras.optimizers.SGD(learning_rate=0.01)
+        self.p_optim = tf.keras.optimizers.SGD(learning_rate=1.)
 
         self.optim = tf.keras.optimizers.RMSprop(rho=0.99, epsilon=1e-5) # Learning rate is affected when training
 
@@ -313,7 +313,7 @@ class AC(tf.keras.Model, Default):
         tf.summary.scalar(name=log_name + "/max_logp", data=max_logp)
         tf.summary.scalar(name=log_name + "/grad_norm", data=grad_norm)
         #tf.summary.scalar(name="misc/distance", data=tf.reduce_mean(states[:, :, -1]))
-        tf.summary.scalar(name=log_name + "/reward", data=tf.reduce_sum(rewards))
+        tf.summary.scalar(name=log_name + "/reward", data=tf.reduce_sum(tf.reduce_mean(rewards, axis=0)))
 
 
     @tf.function

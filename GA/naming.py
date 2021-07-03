@@ -33,8 +33,78 @@ class Name:
         'Bananas',
         'KJH',
         'Shroomed',
-
+        'Westballz',
+        'Medz',
+        'MikeHaze',
+        'Professor Pro',
+        '2saint',
+        'Gahtzu',
+        'Albert',
+        'Spud',
+        'FatGoku',
+        'Rishi',
+        'Bimbo',
+        'Magi',
+        'Morsecode762',
+        'Jakenshaken',
+        'HugS',
+        'Stango',
+        'Zamu',
+        'Drephen',
+        'Michael',
+        'Ice',
+        'billybopeep',
+        'La Luna',
+        'Colbol',
+        'Overtriforce',
+        'Slox',
+        'Kalamazhu',
+        'Nickemwit',
+        'Jerry',
+        'Aura',
+        'Nut',
+        'Kalvar',
+        'Polish',
+        'Kevin Maples',
+        'Bladewise',
+        'Tai',
+        'Squid',
+        'Forrest',
+        'Joyboy',
+        'koDoRiN',
+        'Ryan Ford',
+        'Free Palestine',
+        'Ryobeat',
+        'Ka-Master',
+        'Kũrv',
+        'Frenzy',
+        'MoG',
+        'Boyd',
+        'Cool Lime',
+        'bobby big ballz',
+        'Nintendude',
+        'Franz',
+        'Nicki',
+        'lint',
+        'King Momo',
+        'TheRealThing',
+        'Umarth',
+        'Zeo',
+        'Pricent',
+        'Prince Abu',
+        'Amsah',
+        'Rocky',
+        'Sharkz',
+        'HTwa',
         'Kage',
+        'Schythed',
+        'Panda',
+        'Soonsay',
+        'TheSWOOPER',
+        'Snowy',
+
+        'Azen',
+
     ])
 
     _custom = np.array([
@@ -58,10 +128,8 @@ class Name:
         'DontTestMe',
         'BossTheme',
         'FD is lame',
-        'How to wavedash',
+        'trash',
         'ElephantBoi',
-        'I am nott goude',
-        'not a Fox main',
 
         'Georges'
     ])
@@ -82,14 +150,16 @@ class Name:
 
     @staticmethod
     def clip_name_prefix(name, low=0.3, high=0.7):
-        l = np.clip(len(name)*low, 1, np.inf)
-        h = len(name)*high + 1
+        l = floor(np.clip(len(name)*low, 1, np.inf))
+        h = ceil(len(name)*high + 1)
+
         return name[:np.random.randint(l, h)]
 
     @staticmethod
     def clip_name_suffix(name, low=0.3, high=0.7):
-        l = np.clip(len(name) * (1-high), 1, np.inf)
-        h = len(name ) * (1-low) + 1
+        l = floor(np.clip(len(name) * (1-high), 1, np.inf))
+        h = ceil(len(name ) * (1-low) + 1)
+
         return name[np.random.randint(l, h):]
 
     def inerit_from(self, *other_names):
@@ -105,6 +175,9 @@ class Name:
 
     def get(self):
         return self._name
+
+    def set(self, name):
+        self._name = name
 
     def __repr__(self):
         return self._name

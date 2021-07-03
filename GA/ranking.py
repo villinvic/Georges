@@ -8,6 +8,7 @@ class Elo(Default):
         super(Elo, self).__init__()
 
         self.n = 0
+        self.games_played = 0
         self.elite = False
         self.locked = locked
 
@@ -15,6 +16,8 @@ class Elo(Default):
 
 
     def update(self, team_elo, other_elo, result):
+        self.games_played +=1
+
         if not self.locked:
             self.start = self.start + self.k * (result - self.p(team_elo-other_elo))
             self.n += 1

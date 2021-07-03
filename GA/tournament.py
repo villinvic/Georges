@@ -1,14 +1,17 @@
 import itertools
 
 from config.loader import Default
+from logger.logger import Logger
 
 import numpy as np
-from math import comb
-from time import sleep
-from itertools import combinations
+from math import comb, ceil, log
+import copy
+import datetime
+import sys
+import os
 
 
-class Tournament(Default):
+class Tournament(Default, Logger):
     def __init__(self, pop_size):
         super(Tournament, self).__init__()
         self.pop_size = pop_size
@@ -21,6 +24,7 @@ class Tournament(Default):
         self.bracket = Bracket(size=self.n_pools*self.pool_qualifications)
 
         self.winners = None
+
 
     def do_pools(self):
 
@@ -46,45 +50,49 @@ class Tournament(Default):
 
 
     def step(self, type, p1, p2, p3, p4, result):
-        if result == 0:
-            winner = np.argwhere(self.teams==p3)[0,0]
-        elif result == 1 :
-            winner = np.argwhere(self.teams==p1)[0,0]
+        if type in ['pool', 'bracket']:
+            if result == 0:
+                winner = np.argwhere(self.teams==p3)[0,0]
+            elif result == 1 :
+                winner = np.argwhere(self.teams==p1)[0,0]
 
-        if type=='pool':
-            self.pool_wins[winner] += 1
-            for i,p in enumerate(self.pools):
-                if not p.is_done :
-                    qualified = p.qualified(self.pool_wins, n=self.pool_qualifications)
-                    if qualified is not None:
-                        for q in qualified:
-                            self.bracket.register(q)
+            if type=='pool':
+                self.pool_wins[winner] += 1
+                for i,p in enumerate(self.pools):
+                    if not p.is_done :
+                        qualified = p.qualified(self.pool_wins, n=self.pool_qualifications)
+                        if qualified is not None:
+                            self.logger.info('Teams %s qualified for brackets !' % str(qualified))
+                            for q in qualified:
+                                self.bracket.register(q)
 
-        elif type=='bracket':
-            level, match_num = self.bracket.entrants[winner]
-            level += 1
-            match_num //= 2
-            self.bracket.levels[level][match_num].append(winner)
-            self.bracket.entrants[winner] = (level, match_num)
+            elif type=='bracket':
+                level, match_num = self.bracket.entrants[winner]
+                level += 1
+                match_num //= 2
+                self.bracket.levels[level][match_num].append(winner)
+                self.bracket.entrants[winner] = (level, match_num)
 
 
     def do_brackets(self):
         for match in self.bracket.matches():
-            yield 'bracket', (*self.teams[match[0]], *self.teams[match[1]])
-
+            if match is None:
+                yield None
+            else:
+                yield 'bracket', (*self.teams[match[0]], *self.teams[match[1]])
     def __call__(self):
         for m in self.do_pools():
             yield m
         for m in self.do_brackets():
             yield m
 
-        while self.bracket.winners() is None:
+        while len(self.bracket.winners()) == 0:
             yield None
 
         self.winners = self.bracket.winners()
 
     def result(self):
-        if self.winners is None:
+        if self.winners is None :
             return None
         else:
             return self.teams[self.winners][0]
@@ -130,6 +138,8 @@ class Bracket:
         self.register_order = np.arange(size)
         np.random.shuffle(self.register_order)
 
+        self.visualizer = None
+
         self.entrants = {}
 
     def register(self, team):
@@ -140,13 +150,15 @@ class Bracket:
             self.levels[0][match_num].append(team)
             self.register_index += 1
 
+            print(self.register_index, self.levels[0])
+
         else :
             print('tournament full!')
 
     def matches(self):
         for level in self.levels[:-1]:
             for match in level:
-                while None in match :
+                while len(match)<2 :
                     yield None
                 yield match
 
@@ -154,6 +166,97 @@ class Bracket:
         return self.levels[-1][0]
 
 
+class BracketVisualizer:
+    """
+    Adapted from :
+    https://github.com/cristiean/bracket/tree/e1e20397ef0405f09cf4854028f498ded21bfaa0
+    """
+    def __init__(self, teams):
+        self.numTeams = len(teams)
+        self.teams = list(teams)
+        self.max = len(max(["Round "] + teams, key=len))
+        self.numRounds = int(ceil(log(self.numTeams, 2)) + 1)
+        self.totalNumTeams = int(2 ** ceil(log(self.numTeams, 2)))
+        self.totalTeams = self.addTeams()
+        self.lineup = ["bye" if "-" in str(x) else x for x in self.totalTeams]
+        print(self.lineup)
+        self.numToName()
+        self.count = 0
+        self.rounds = []
+        for i in range(0, self.numRounds):
+            self.rounds.append([])
+            for _ in range(0, 2 ** (self.numRounds - i - 1)):
+                self.rounds[i].append("-" * self.max)
+        self.rounds[0] = list(self.totalTeams)
+
+    def numToName(self):
+        for i in range(0, self.numTeams):
+            self.totalTeams[self.totalTeams.index(i + 1)] = self.teams[i]
+
+    def update(self, rounds, teams):
+        lowercase = [team.lower() for team in self.rounds[rounds - 2]]
+        for team in teams:
+            try:
+                index = lowercase.index(team.lower())
+                self.rounds[rounds - 1][int(index / 2)] = self.rounds[rounds - 2][index]
+            except:
+                return False
+        if "-" * self.max in self.rounds[rounds - 1]:
+            return False
+        return True
+
+    def show(self):
+        print('='*15)
+        print('')
+        self.count = 0
+        self.temp = copy.deepcopy(self.rounds)
+        self.tempLineup = list(self.lineup)
+        sys.stdout.write("Seed ")
+        for i in range(1, self.numRounds + 1):
+            sys.stdout.write(("Round " + str(i)).rjust(self.max + 3))
+        print("")
+        self.recurse(self.numRounds - 1, 0)
+
+        print('')
+        print('=' * 15)
+
+
+    def recurse(self, num, tail):
+        if num == 0:
+            self.count += 1
+            if tail == -1:
+                print(str(self.tempLineup.pop(0)).rjust(4) + self.temp[0].pop(0).rjust(self.max + 3) + " \\")
+            elif tail == 1:
+                print(str(self.tempLineup.pop(0)).rjust(4) + self.temp[0].pop(0).rjust(self.max + 3) + " /")
+        else:
+            self.recurse(num - 1, -1)
+            if tail == -1:
+                print("".rjust(4) + "".rjust((self.max + 3) * num) + self.temp[num].pop(0).rjust(self.max + 3) + " \\")
+            elif tail == 1:
+                print("".rjust(4) + "".rjust((self.max + 3) * num) + self.temp[num].pop(0).rjust(self.max + 3) + " /")
+            else:
+                print("".rjust(4) + "".rjust((self.max + 3) * num) + self.temp[num].pop(0).rjust(self.max + 3))
+            self.recurse(num - 1, 1)
+
+    def addTeams(self):
+        x = self.numTeams
+        teams = [1]
+        temp = []
+        count = 0
+        for i in range(2, x + 1):
+            temp.append(i)
+        for i in range(0, int(2 ** ceil(log(x, 2)) - x)):
+            temp.append("-" * self.max)
+        for _ in range(0, int(ceil(log(x, 2)))):
+            high = max(teams)
+            for i in range(0, len(teams)):
+                index = teams.index(high) + 1
+                teams.insert(index, temp[count])
+                high -= 1
+                count += 1
+        return teams
+
+"""
 class Player:
     def __init__(self, ID, power=1.):
         self.id = ID
@@ -161,6 +264,10 @@ class Player:
 
     def __repr__(self):
         return str(self.power)
+
+
+
+
 
 
 def play_match(m):
@@ -173,7 +280,8 @@ def play_match(m):
 
 
 
-"""
+
+
 if __name__ == '__main__':
 
     x = 0.

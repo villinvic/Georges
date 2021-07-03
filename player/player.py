@@ -15,9 +15,9 @@ from time import time
 class Player:
     def __init__(self,
                  index,
-                 pad_path='dolphin/User/Pipes/daboy',
-                 trajectory_length = 80,
-                 state_dim = None,
+                 pad_path,
+                 trajectory_length,
+                 state_dim,
                  ):
 
         self.index = index
@@ -71,6 +71,9 @@ class Player:
                 state.get(self.trajectory['state'][traj_index], self.index, self.last_action_id)
 
                 action_id, distribution, hidden_h, hidden_c = self.policy(self.trajectory['state'][traj_index])
+                if action_id > self.action_space.dim:
+                    print(distribution)
+                    action_id = self.action_space.dim-1
                 action = self.action_space[action_id]
                 if isinstance(action, list):
                     self.action_queue.extend(reversed(action))

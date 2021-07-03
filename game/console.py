@@ -5,21 +5,29 @@ from characters.characters import *
 from population.individual import Individual
 
 from time import sleep, time
+import os
 import sys
 
 class Console:
     def __init__(self,
-                 ID=0,
-                 trajectory_length=100,
-                 mw_path='dolphin/User/MemoryWatcher',
-                 test=True,
-                 exe_path='dolphin/dolphin-emu-nogui-id',
-                 iso_path='../isos/game.iso',
+                 ID,
+                 trajectory_length,
+                 mw_path,
+                 exe_path,
+                 iso_path,
+                 pad_path,
+                 test,
                  ):
         self.id = ID
         self.dolphin = DolphinInstance(exe_path, iso_path, test, ID)
         self.state = GameState(mw_path=mw_path, instance_id=ID, test=test)
-        self.players = PlayerGroup([Player(i, trajectory_length=trajectory_length, state_dim=self.state.size) for i in range(4)])
+
+        instance_pad_path = pad_path + str(ID) + '/'
+        if not os.path.isdir(instance_pad_path):
+            os.makedirs(instance_pad_path)
+
+        self.players = PlayerGroup([Player(i, trajectory_length=trajectory_length, state_dim=self.state.size,
+                                           pad_path=instance_pad_path) for i in range(4)])
 
     def play_game(self, *individuals):
 
@@ -28,35 +36,44 @@ class Console:
         self.state.update_players(individuals)
         self.players.connect_pads()
         self.dolphin.run(*self.players)
-        sleep(5)
+        #sleep(3)
 
 
 
 
         frames = 0
-        t = time()
         done = False
         result = None
         self.state.init()
-        while not done and time() - t < 10*60:
+        while not done and frames < 10*60*60:
             # Player hold a trajectory instance
             # choose action based on state, send to controller
             # data required : time of traj, states, actions, probabilities
             done, result = self.state.update()
+            if result is None:
+                self.players.finalize()
+                self.dolphin.close()
+                self.state.mw.unbind()
+                self.players.disconnect_pads()
+                sleep(1)
+                self.play_game(*individuals)
+
+
             self.players.act(self.state)
             frames += 1
 
-        self.players.finalize()
 
+        self.players.finalize()
         self.dolphin.close()
         self.state.mw.unbind()
         self.players.disconnect_pads()
+
         return result
 
     def close(self):
         self.dolphin.close()
         self.state.mw.unbind()
-
+        self.players.disconnect_pads()
 
 if __name__ == '__main__':
     c = Console()

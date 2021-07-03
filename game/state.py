@@ -628,6 +628,8 @@ class GameState:
             last_frame = self.frame
             updated_ram = next(self.mw)
             if updated_ram is not None:
+                if updated_ram == -1 :
+                    return updated_ram, None
                 # Update the state
                 self.manager.handle(updated_ram)
                 self.compute_frames_left()
