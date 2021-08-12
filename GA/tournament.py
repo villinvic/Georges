@@ -14,11 +14,12 @@ import os
 class Tournament(Default, Logger):
     def __init__(self, pop_size):
         super(Tournament, self).__init__()
-        self.pop_size = pop_size
 
         self.n_teams = pop_size//2
-        self.teams = np.random.choice(pop_size, (self.n_teams, 2), replace=False)
+        #self.teams = np.concatenate(
+        #    [np.random.choice(pop_size, (self.n_teams, 2), replace=False) for _ in range(2)], axis=0)
         self.pool_wins = np.zeros((self.n_teams,), dtype=np.int32)
+        self.teams = np.random.choice(pop_size, (self.n_teams, 2), replace=False)
 
         self.pools = None
         self.bracket = Bracket(size=self.n_pools*self.pool_qualifications)

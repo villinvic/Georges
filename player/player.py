@@ -71,7 +71,7 @@ class Player:
                 state.get(self.trajectory['state'][traj_index], self.index, self.last_action_id)
 
                 action_id, distribution, hidden_h, hidden_c = self.policy(self.trajectory['state'][traj_index])
-                if action_id > self.action_space.dim:
+                if action_id >= self.action_space.dim:
                     print(distribution)
                     action_id = self.action_space.dim-1
                 action = self.action_space[action_id]

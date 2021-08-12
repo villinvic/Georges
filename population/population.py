@@ -57,6 +57,9 @@ class Population:
     def __repr__(self):
         return self.individuals.__repr__()
 
+    def to_dict(self):
+        return {individual.id:individual.to_dict() for individual in self}
+
     def to_serializable(self):
         return self.to_serializable_v(self.individuals[:self.size])
 
@@ -95,7 +98,6 @@ class Population:
                 params = json.load(json_file)
             for param_name, value in params.items():
                 setattr(self, param_name, value)
-            self.checkpoint_index += 1
         except Exception as e:
             print(e)
 

@@ -4,6 +4,8 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import numpy as np
 import zmq
 import zmq.ssh as zmq_ssh
+import zmq.decorators
+
 from time import sleep
 import signal
 import fire
@@ -20,7 +22,7 @@ from game.enums import PlayerType
 
 class Arena(Default, Logger):
     def __init__(self,
-                 hub_ip=None,
+                 hub_ip='127.0.0.1',
                  ID=0,
                  test=False,
                  obs_streaming=False,
@@ -31,13 +33,14 @@ class Arena(Default, Logger):
         self.id = ID
         self.zmq_context = zmq.Context()
         self.trainer_ip = self.hub_ip = hub_ip
+        self.hub_pop_info = dict()
 
-        self.match_socket = self.zmq_context.socket(zmq.REQ)
         if ssh:
-            zmq_ssh.tunnel_connection(self.match_socket, "tcp://%s:%d" % (self.hub_ip, self.MATCH_PORT),
-                                  "isys3@%s:%d" % (self.hub_ip, self.MATCH_PORT), password=ssh)
+            self.connect = lambda socket: zmq_ssh.tunnel_connection(socket, "tcp://%s:%d" % (self.hub_ip, self.MATCH_PORT),
+                                  "isys3@%s" % self.hub_ip, password=ssh)
+
         else:
-            self.match_socket.connect("tcp://%s:%d" % (self.hub_ip, self.MATCH_PORT))
+            self.connect = lambda socket: socket.connect("tcp://%s:%d" % (self.hub_ip, self.MATCH_PORT))
 
         self.players = np.empty((4,), dtype=IndividualManager)
         for i in range(len(self.players)):
@@ -55,25 +58,8 @@ class Arena(Default, Logger):
 
         self.obs_streaming = obs_streaming
         if obs_streaming:
-            from population.population import Population
             self.stream_path = "obs/match_info{player_index}.txt"
-            self.stream_pipe = self.zmq_context.socket(zmq.SUB)
-            self.stream_pipe.subscribe('')
-            self.stream_pipe.connect("tcp://%s:%d" %(self.hub_ip, self.STREAMING_PORT))
-            self.population = Population(self.POP_SIZE, n_reference=1)
-            self.population.initialize()
-            self.logger.info('Synchronization with Hub...')
-            c = 0
-            while True:
-                try:
-                    self.population.read_pickled(self.stream_pipe.recv_pyobj(zmq.NOBLOCK))
-                    break
-                except zmq.ZMQError:
-                    pass
-                sleep(1)
-                c += 1
-                if c > 30:
-                    self.logger.debug('Can\'t connect to hub for streaming!')
+
         else:
             self.stream_path = None
 
@@ -102,21 +88,26 @@ class Arena(Default, Logger):
             sleep(1.)
             if tries > 30 :
                 self.logger.warning('CANT ACCESS TRAINER')
-                # 28
 
-    def request_match(self, last_match_result=(None, (None, None, None, None, None))):
+    @zmq.decorators.socket(zmq.REQ)
+    def request_match(self, match_socket, last_match_result=(None, (None, None, None, None, None))):
+        self.connect(match_socket)
+        match_socket.setsockopt(zmq.RCVTIMEO, 30000)
+        match_socket.setsockopt(zmq.LINGER, 0)
         try:
-            self.match_socket.send_pyobj(last_match_result)
-            match_type, new_player_ids = self.match_socket.recv_pyobj()
-            self.update_players(new_player_ids)
+
+            match_socket.send_pyobj(last_match_result + (self.obs_streaming,))
             if self.obs_streaming:
-                self.update_stream_info(new_player_ids)
+                match_type, new_player_ids, pop_dict = match_socket.recv_pyobj()
+                self.hub_pop_info.update(pop_dict)
+                self.update_stream_info(new_player_ids, pop_dict)
+            else:
+                match_type, new_player_ids = match_socket.recv_pyobj()
+            self.update_players(new_player_ids)
             return match_type, new_player_ids
         except zmq.ZMQError as e:
             print(e)
-
-        return None, (None, None, None , None)
-
+            return self.request_match(last_match_result=last_match_result)
 
 
     def play_game(self):
@@ -130,7 +121,7 @@ class Arena(Default, Logger):
         while True:
 
             self.logger.debug('Arena %d requesting Match...' % self.id)
-            match_type, player_ids = self.request_match((match_type, (*player_ids, last_match_result)))
+            match_type, player_ids = self.request_match(last_match_result=(match_type, (*player_ids, last_match_result)))
             if player_ids[0] is not None:
                 self.logger.debug('Arena %d received match : [%d,%d]vs[%d,%d]' % (self.id, *player_ids))
                 last_match_result = self.play_game()
@@ -144,22 +135,22 @@ class Arena(Default, Logger):
         self.exited = True
         self.console.close()
         self.logger.info('Arena %d closed' % self.id)
-        os.kill(os.getpid(), signal.SIGUSR1)
+
+
+        import pprint
+        for char in characters.available_chars:
+            print(char)
+            pprint.pprint(char.frame_data)
+
+        sys.exit(0)
 
     # if we are streaming the arena
-    def update_stream_info(self, player_ids):
-        try :
-            self.population.read_pickled(self.stream_pipe.recv_pyobj(zmq.NOBLOCK))
-        except zmq.ZMQError:
-            pass
-
+    def update_stream_info(self, player_ids, pop_dict):
         for i, player_id in enumerate(player_ids):
-            comment = "[%s](%.0f)" % (self.population[player_id].name.get(),
-                                    self.population[player_id].elo())
+            p_info = pop_dict[player_id]
+            comment = "[%s](%.0f)" % (p_info['name'], p_info['elo'])
             with open(self.stream_path.format(player_index=i), 'w+') as f:
                 f.write(comment)
-
-
 
 class TrainerConnection(Default):
     def __init__(self, individual_id, trainer_ip, ssh, zmq_c: zmq.Context):

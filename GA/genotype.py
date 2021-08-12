@@ -205,7 +205,7 @@ class EvolvingCharacter(Default):
         if np.random.random() < self.perturb_chance:
             p = np.ones(len(available_chars), dtype=np.float32)
             for clone in self._character.clones:
-                p[enum2index[clone]] += self.clone_weight
+                p[enum2index[clone]] += self.clone_weight / float(len(self._character.clones))
 
             self._character = np.random.choice(available_chars, None, p=p/np.sum(p))
             self.history.append(self._character)
@@ -213,6 +213,7 @@ class EvolvingCharacter(Default):
     def crossover(self, other_char):
         if np.random.random() < 0.5:
             self._character = other_char._character
+            self.history.append(self._character)
 
     def __repr__(self):
         return self._character.__name__

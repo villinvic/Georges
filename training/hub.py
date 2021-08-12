@@ -18,6 +18,7 @@ from logger.logger import Logger
 from GA.tournament import Tournament
 from population.population import Population
 from characters.characters import string2char
+import visualization.ranking
 
 
 class Hub(Default, Logger):
@@ -59,19 +60,24 @@ class Hub(Default, Logger):
     def handle_actor_requests(self, tournament_match=None):
         try:
             if tournament_match is not None:
-                match_type, msg = self.match_socket.recv_pyobj()
+                match_type, msg, streaming = self.match_socket.recv_pyobj()
             else:
-                match_type, msg = self.match_socket.recv_pyobj(flags=zmq.NOBLOCK)
+                match_type, msg, streaming = self.match_socket.recv_pyobj(flags=zmq.NOBLOCK)
                 self.logger.debug(match_type)
 
             if match_type is not None:
                 self.update_elos(*msg)
 
             if tournament_match is None:
+                msg = ('normal', self.sample_players())
+                if streaming:
+                    msg += (self.population.to_dict(),)
                 self.match_socket.send_pyobj(
-                    ('normal', self.sample_players())
+                    msg
                 )
             else:
+                if streaming:
+                    tournament_match += (self.population.to_dict(),)
                 self.match_socket.send_pyobj(
                     tournament_match
                 )
@@ -131,12 +137,16 @@ class Hub(Default, Logger):
 
     def do_tournament(self):
         self.logger.info('--Starting Tournament--')
+        tournament_start_time = time()
         tournament = Tournament(self.POP_SIZE)
         for match in tournament():
             type, msg = self.handle_actor_requests(tournament_match=match)
             if msg is not None:
                 tournament.step(type, *msg)
                 self.update_population()
+            if time() - tournament_start_time > self.tournament_timeout_minutes * 60:
+                self.logger.warning('Tournament was interrupted : Timeout')
+                return
         w1, w2 = tournament.result()
         self.logger.info('-- Tournament winners --')
         self.logger.info(self.population[w1])
@@ -216,14 +226,18 @@ class Hub(Default, Logger):
             sleep(0.1)
 
         self.logger.info('Saving population and parameters...')
+
+
         ckpt_path = 'checkpoints/'+self.running_instance_identifier+'/'
         full_path = ckpt_path + 'ckpt_' + str(self.population.checkpoint_index) + '/'
+        self.population.checkpoint_index += 1
         if not os.path.exists(full_path):
             try:
                 os.makedirs(full_path)
             except OSError as exc:
                 print(exc)
 
+        visualization.ranking.visualize(self.population, full_path)
         self.population.save(full_path)
 
         _, dirs, _ = next(os.walk(ckpt_path))

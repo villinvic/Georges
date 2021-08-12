@@ -112,10 +112,15 @@ class Name:
         'Syquo',
         'Goji',
         'Punchim',
+        'Jolie-Edeweiss',
+        'Bellin',
 
         'dark siko',
         'El Moustacho',
-        
+
+        'chevrier',
+
+        'HowToJV5'
         'GanonNose',
         '0-to-SD',
         'CarpalSyndrome',
@@ -128,10 +133,12 @@ class Name:
         'DontTestMe',
         'BossTheme',
         'FD is lame',
-        'trash',
-        'ElephantBoi',
+        'taking out trash',
+        'CringeBoi',
+        'TurboInt',
+        'MegaMan',
 
-        'Georges'
+        'Georges',
     ])
 
 

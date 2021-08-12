@@ -332,7 +332,7 @@ class AC(tf.keras.Model, Default):
 
                 action_states = tf.cast(tf.argmax(states[:, :-1,
                     PlayerState.onehot_offsets['action_state']:
-                    PlayerState.onehot_offsets['action_state']+ PlayerState.action_state_dim], axis=2), dtype=tf.int32)
+                    PlayerState.onehot_offsets['action_state'] + PlayerState.action_state_dim], axis=2), dtype=tf.int32)
 
                 taken_as = tf.gather_nd(as_probs, tf.expand_dims(action_states, axis=2), batch_dims=0)
                 NLL = -tf.math.log(taken_as + 1e-8)

@@ -574,7 +574,14 @@ class GameState:
                 #self.is_dying[i] = int(action_state <= 10)
 
                 max_frame = char.frame_data[ActionState(action_state).name]
-                if max_frame > 0 :
+                if True and max_frame > 0 :
+                    remaining_frames = max_frame - self.state[self.indexes[p+'action_frame']]
+
+                    if remaining_frames < 0:
+                        if remaining_frames > -2  :
+                            char.frame_data[ActionState(action_state).name] = self.state[self.indexes[p+'action_frame']]
+                            print(char, ActionState(action_state).name, max_frame, self.state[self.indexes[p+'action_frame']])
+
                     self.state[self.indexes[p+'action_frame']] = np.clip(max_frame - self.state[self.indexes[p+'action_frame']], 0, np.inf)
 
     def compute_stocks_left(self):
@@ -607,6 +614,7 @@ class GameState:
                 target[PlayerState.size * 4:] = self.action()
 
         target *= self.scales
+        np.clip(target, -5, 5, out=target)
 
     def init(self, amount=150):
         updated_ram = None

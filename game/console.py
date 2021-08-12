@@ -56,7 +56,7 @@ class Console:
                 self.state.mw.unbind()
                 self.players.disconnect_pads()
                 sleep(1)
-                self.play_game(*individuals)
+                return self.play_game(*individuals)
 
 
             self.players.act(self.state)
