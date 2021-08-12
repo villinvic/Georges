@@ -26,6 +26,7 @@ class Hub(Default, Logger):
         super(Hub, self).__init__()
 
         self.ip = '127.0.0.1' if is_localhost else gethostbyname(gethostname())
+        self.logger.info('Hub started at ' + self.ip)
         self.running_instance_identifier = datetime.datetime.now().strftime("Georges_%Y-%m-%d_%H-%M")
 
         self.population = Population(self.POP_SIZE)
