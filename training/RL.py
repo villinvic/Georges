@@ -298,8 +298,8 @@ class AC(tf.keras.Model, Default):
         self.optim.learning_rate.assign(training_params['learning_rate'])
 
         v_loss, mean_entropy, min_entropy, max_entropy, min_logp, max_logp, grad_norm, as_entropy \
-            = self._train(training_params['entropy_cost'], training_params['gamma'], np.float32(as_entropy_scale), states, actions,
-                          rewards, probs, hidden_states , gpu)
+            = self._train(np.float32(training_params['entropy_cost']), np.float32(training_params['gamma']),
+                          np.float32(as_entropy_scale), states, actions, rewards, probs, hidden_states , gpu)
 
         tf.summary.scalar(name=log_name + "/v_loss", data=v_loss)
         tf.summary.scalar(name=log_name + "/as_ent", data=as_entropy)
