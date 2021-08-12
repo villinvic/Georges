@@ -39,8 +39,6 @@ class Hub(Default, Logger):
         self.logger.info(self.population)
         self.trainers = [None] * self.N_TRAINERS
 
-
-
         # read config for ports
         # socket for sending matches or starting training session modes
         # receiving match results
