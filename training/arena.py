@@ -163,8 +163,6 @@ class TrainerConnection(Default):
         self.param_socket = zmq_c.socket(zmq.SUB)
         self.exp_socket = zmq_c.socket(zmq.PUSH)
 
-        print(trainer_ip, self.param_port)
-
         if ssh:
             zmq_ssh.tunnel_connection(self.param_socket, "tcp://%s:%d" % (trainer_ip, self.param_port),
                                       "isys3@%s:%d" % (trainer_ip, self.param_port), password=ssh)
