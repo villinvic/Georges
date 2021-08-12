@@ -77,7 +77,6 @@ class Arena(Default, Logger):
                 self.players[i].name._name = self.REFERENCE_NAME
                 self.players[i].genotype['type']._character = characters.string2char[self.REFERENCE_CHAR]
                 successes[i] = True
-
         tries = 0
 
         while not np.all(successes):
