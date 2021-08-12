@@ -22,10 +22,10 @@ import visualization.ranking
 
 
 class Hub(Default, Logger):
-    def __init__(self, is_localhost=False, ckpt=""):
+    def __init__(self, ip=None, ckpt=""):
         super(Hub, self).__init__()
 
-        self.ip = '127.0.0.1' if is_localhost else gethostbyname(gethostname())
+        self.ip = '127.0.0.1' if ip is None else ip
         self.logger.info('Hub started at ' + self.ip)
         self.running_instance_identifier = datetime.datetime.now().strftime("Georges_%Y-%m-%d_%H-%M")
 
