@@ -104,7 +104,8 @@ class Genotype(Default):
 
 class EvolvingFamily:
     def __init__(self):
-        self._variables = {name: EvolvingVariable(name, (domain_lower, domain_higher), self.perturb_power, self.perturb_chance) for name, domain_lower, domain_higher
+        self._variables = {name: EvolvingVariable(name, (domain_lower, domain_higher), self.perturb_power,
+                                                 self.perturb_chance, self.reset_chance) for name, domain_lower, domain_higher
                           in self.variable_base}
 
         # get rid of the panda data
@@ -151,23 +152,28 @@ class LearningParams(Default, EvolvingFamily):
 
 
 class EvolvingVariable(Default):
-    def __init__(self, name, domain, perturb_power=0.2, perturb_chance=0.05, frozen=False):
+    def __init__(self, name, domain, perturb_power=0.2, perturb_chance=0.05, reset_chance=0.1, frozen=False):
         super(EvolvingVariable, self).__init__()
         self.name = name
         self.domain = domain
         self._current_value = misc.log_uniform(*domain)
         self.perturb_power = perturb_power
+
         if name == 'gamma':
             self.perturb_power = 0.0015
         self.perturb_chance = perturb_chance
+        self.reset_chance = reset_chance
         self.history = deque([self._current_value], maxlen=int(self.history_max))
 
         self.frozen = frozen
 
     def perturb(self):
         if not self.frozen and np.random.random() < self.perturb_chance:
-            perturbation = np.random.uniform(1.-self.perturb_power, 1.+self.perturb_power)
-            self._current_value = np.clip(perturbation * self._current_value, *self.domain) # clip ??
+            if np.random.random() < self.reset_chance:
+                self._current_value = misc.log_uniform(self.domain)
+            else:
+                perturbation = np.random.uniform(1.-self.perturb_power, 1.+self.perturb_power)
+                self._current_value = np.clip(perturbation * self._current_value, *self.domain) # clip ??
             self.history.append(self._current_value)
 
     def crossover(self, other_variable):
