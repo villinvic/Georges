@@ -68,11 +68,11 @@ class Hub(Default, Logger):
                 self.update_elos(*msg)
 
             if tournament_match is None:
-                msg = ('normal', self.sample_players())
+                msg_2 = ('normal', self.sample_players())
                 if streaming:
-                    msg += (self.population.to_dict(),)
+                    msg_2 += (self.population.to_dict(),)
                 self.match_socket.send_pyobj(
-                    msg
+                    msg_2
                 )
             else:
                 if streaming:
