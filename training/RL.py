@@ -297,8 +297,6 @@ class AC(tf.keras.Model, Default):
         # Set both networks with corresponding initial recurrent state
         self.optim.learning_rate.assign(training_params['learning_rate'])
 
-
-
         v_loss, mean_entropy, min_entropy, max_entropy, min_logp, max_logp, grad_norm, as_entropy \
             = self._train(np.float32(training_params['entropy_cost']), np.float32(training_params['gamma']),
                           np.float32(as_entropy_scale), states, actions, rewards, probs, hidden_states , gpu)
@@ -323,6 +321,18 @@ class AC(tf.keras.Model, Default):
         '''
         Main training function
         '''
+
+        if tf.reduce_any(tf.math.is_nan(states)):
+            print('states')
+        if tf.reduce_any(tf.math.is_nan(actions)):
+            print('actions')
+        if tf.reduce_any(tf.math.is_nan(rewards)):
+            print('rewards')
+        if tf.reduce_any(tf.math.is_nan(probs)):
+            print('probs')
+        if tf.reduce_any(tf.math.is_nan(hidden_states)):
+            print('hidden_states')
+
 
         with tf.device("/gpu:{}".format(gpu) if gpu >= 0 else "/cpu:0"):
 
@@ -391,7 +401,8 @@ class AC(tf.keras.Model, Default):
                 x += tf.reduce_mean(tf.abs(gg))
             x /= c
 
-            self.optim.apply_gradients(zip(grad, self.policy.trainable_variables + self.V.trainable_variables))
+            self.optim.apply_gradients(zip(grad, self.policy.trainable_variables
+                                           + self.V.trainable_variables + self.lstm.trainable_variables))
 
             self.step.assign_add(1)
             mean_entropy = tf.reduce_mean(ent)
