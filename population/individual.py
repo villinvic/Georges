@@ -102,7 +102,7 @@ class Individual:
     def inerit_from(self, *other_individuals):
         self.elo = Elo()  # reset
         if len(other_individuals) == 1:
-            self.genotype.set_params(other_individuals[0].genotype.get_params())
+            self.genotype.set_params(other_individuals[0].genotype.get_params(), trainable=True)
             self.name.inerit_from(other_individuals[0].name)
             self.elo.start = other_individuals[0].elo()
         elif len(other_individuals) == 2:

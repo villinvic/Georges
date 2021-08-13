@@ -142,11 +142,12 @@ class Hub(Default, Logger):
             type, msg = self.handle_actor_requests(tournament_match=match)
             if msg is not None:
                 tournament.step(type, *msg)
-                self.update_population()
+
             if time() - tournament_start_time > self.tournament_timeout_minutes * 60:
                 self.logger.warning('Tournament was interrupted : Timeout')
                 return
         w1, w2 = tournament.result()
+        self.update_population()
         self.logger.info('-- Tournament winners --')
         self.logger.info(self.population[w1])
         self.logger.info(self.population[w2])
