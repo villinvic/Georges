@@ -15,8 +15,8 @@ class PlayerState:
         ('attack_vel_x', 0.5),
         ('attack_vel_y', 0.5),
         ('ground_vel', 0.5),
-        ('x', 0.01),
-        ('y', 0.01),
+        ('x', 0.05),
+        ('y', 0.05),
         ('on_ground', 1.),
         ('action_frame', 0.01),
         ('percent', 0.01),
@@ -615,6 +615,7 @@ class GameState:
 
         target *= self.scales
         np.clip(target, -5, 5, out=target)
+        np.nan_to_num(target)
 
     def init(self, amount=150):
         updated_ram = None
