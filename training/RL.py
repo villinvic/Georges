@@ -300,12 +300,7 @@ class AC(tf.keras.Model, Default):
 
         v_loss, mean_entropy, min_entropy, max_entropy, min_logp, max_logp, grad_norm, as_entropy \
             = self._train(tf.cast(training_params['entropy_cost'], tf.float32), tf.cast(training_params['gamma'], tf.float32),
-                          tf.cast(as_entropy_scale, tf.float32), tf.convert_to_tensor(states, dtype=tf.float32),
-                          tf.convert_to_tensor(actions, dtype=tf.int32),
-                          tf.convert_to_tensor(rewards, dtype=tf.float32),
-                          tf.convert_to_tensor(probs, dtype=tf.float32),
-                          tf.convert_to_tensor(hidden_states, dtype=tf.float32),
-                          gpu)
+                          tf.cast(as_entropy_scale, tf.float32), states, actions, rewards, probs, hidden_states, gpu)
 
         tf.summary.scalar(name=log_name + "/v_loss", data=v_loss)
         tf.summary.scalar(name=log_name + "/as_ent", data=as_entropy)
@@ -364,7 +359,7 @@ class AC(tf.keras.Model, Default):
                 p = self.policy.get_probs(lstm_states[:, :-1])
                 kl = tf.divide(p, probs+1e-3)#tf.reduce_sum(p * tf.math.log(tf.divide(p, probs)), axis=-1)
                 indices = tf.concat(values=[self.pattern, self.range_, tf.expand_dims(actions, axis=2)], axis=2)
-                rho_mu = tf.minimum(1., tf.gather_nd(kl, indices, batch_dims=0))
+                rho_mu = tf.maximum(10, tf.minimum(1., tf.gather_nd(kl, indices, batch_dims=0)))
                 targets = self.compute_trace_targets(v_all, rewards, rho_mu, gamma)
                 #targets = self.compute_gae(v_all[:, :-1], rewards[:, :-1], v_all[:, -1])
                 advantage = tf.stop_gradient(targets) - v_all
@@ -381,10 +376,6 @@ class AC(tf.keras.Model, Default):
                     #taken_p_log * tf.stop_gradient(advantage) + self.entropy_scale * ent)
 
                 total_loss = 0.5 * v_loss + p_loss
-
-
-            if tf.abs(p_loss) > 5:
-                tf.print('p_loss', p_loss)
 
             grad = tape.gradient(total_loss, self.policy.trainable_variables
                                  + self.V.trainable_variables
