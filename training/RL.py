@@ -283,7 +283,8 @@ class AC(tf.keras.Model, Default):
         self.as_probs = ActionStateProbs()
         self.p_optim = tf.keras.optimizers.SGD(learning_rate=1.)
 
-        self.optim = tf.keras.optimizers.RMSprop(rho=0.99, epsilon=1e-5) # Learning rate is affected when training
+        #self.optim = tf.keras.optimizers.RMSprop(rho=0.99, epsilon=1e-5) # Learning rate is affected when training
+        self.optim = tf.keras.optimizers.Adam(beta_1=0.9, beta_2=0.98, epsilon=1e-8)
 
         self.step = tf.Variable(0, dtype=tf.int32)
 
@@ -321,17 +322,6 @@ class AC(tf.keras.Model, Default):
         '''
         Main training function
         '''
-
-        if tf.reduce_any(tf.math.is_nan(states)):
-            print('states')
-        if tf.reduce_any(tf.math.is_nan(actions)):
-            print('actions')
-        if tf.reduce_any(tf.math.is_nan(rewards)):
-            print('rewards')
-        if tf.reduce_any(tf.math.is_nan(probs)):
-            print('probs')
-        if tf.reduce_any(tf.math.is_nan(hidden_states)):
-            print('hidden_states')
 
 
         with tf.device("/gpu:{}".format(gpu) if gpu >= 0 else "/cpu:0"):
@@ -408,7 +398,7 @@ class AC(tf.keras.Model, Default):
             mean_entropy = tf.reduce_mean(ent)
             min_entropy = tf.reduce_min(ent)
             max_entropy = tf.reduce_max(ent)
-            return v_loss, mean_entropy, min_entropy, max_entropy, tf.reduce_min(
+            return v_loss, mean_entropy, min_entropy, p_loss, tf.reduce_min(
                 p_log), tf.reduce_max(p_log), x, as_ent
 
     def compute_gae(self, v, rewards, last_v, gamma):
