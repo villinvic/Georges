@@ -302,7 +302,7 @@ class AC(tf.keras.Model, Default):
             = self._train(tf.cast(training_params['entropy_cost'], tf.float32), tf.cast(training_params['gamma'], tf.float32),
                           tf.cast(as_entropy_scale, tf.float32), states, actions, rewards, probs, hidden_states, gpu)
 
-        print(v_loss, max_entropy, mean_entropy, grad_norm)
+        print(v_loss, min_entropy, max_entropy, mean_entropy, grad_norm)
 
         tf.summary.scalar(name=log_name + "/v_loss", data=v_loss)
         tf.summary.scalar(name=log_name + "/as_ent", data=as_entropy)
@@ -398,7 +398,7 @@ class AC(tf.keras.Model, Default):
             mean_entropy = tf.reduce_mean(ent)
             min_entropy = tf.reduce_min(ent)
             max_entropy = tf.reduce_max(ent)
-            return v_loss, mean_entropy, min_entropy, p_loss, tf.reduce_min(
+            return v_loss, mean_entropy, tf.reduce_max(rho_mu), p_loss, tf.reduce_min(
                 p_log), tf.reduce_max(p_log), x, as_ent
 
     def compute_gae(self, v, rewards, last_v, gamma):
