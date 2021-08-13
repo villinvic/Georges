@@ -614,8 +614,7 @@ class GameState:
                 target[PlayerState.size * 4:] = self.action()
 
         target *= self.scales
-        np.clip(target, -10, 10, out=target)
-        np.nan_to_num(target)
+        np.clip(np.nan_to_num(target), -10, 10, out=target)
 
     def init(self, amount=150):
         updated_ram = None
