@@ -45,7 +45,7 @@ class Console:
         done = False
         result = None
         self.state.init()
-        while not done and frames < 10*60*60:
+        while not done and frames < 7*60*60:
             # Player hold a trajectory instance
             # choose action based on state, send to controller
             # data required : time of traj, states, actions, probabilities
