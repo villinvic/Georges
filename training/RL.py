@@ -352,8 +352,9 @@ class AC(tf.keras.Model, Default):
 
             with tf.GradientTape() as tape:
                 # Optimize the actor and critic
+                hidden = tf.where(tf.math.is_nan(hidden_states), tf.zeros_like(hidden_states), hidden_states)
                 if self.has_lstm:
-                    lstm_states = self.lstm(states, initial_state=[hidden_states[:,0],hidden_states[:, 1]])
+                    lstm_states = self.lstm(states, initial_state=[hidden[:,0],hidden[:, 1]])
                 else:
                     lstm_states = states
 
