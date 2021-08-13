@@ -141,6 +141,7 @@ class Hub(Default, Logger):
         for match in tournament():
             type, msg = self.handle_actor_requests(tournament_match=match)
             if msg is not None:
+                print(msg)
                 tournament.step(type, *msg)
                 self.update_population()
             if time() - tournament_start_time > self.tournament_timeout_minutes * 60:
