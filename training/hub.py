@@ -163,7 +163,7 @@ class Hub(Default, Logger):
         for individual in self.population:
             if individual.data_used > self.evolve_period or individual.mean_entropy < self.minimum_entropy:
 
-                #individual.data_used = 0
+                individual.data_used = 0
 
                 indexes = np.arange(self.POP_SIZE)
                 mask = np.ones(self.POP_SIZE, dtype=bool)
