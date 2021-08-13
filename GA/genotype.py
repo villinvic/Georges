@@ -157,6 +157,8 @@ class EvolvingVariable(Default):
         self.domain = domain
         self._current_value = misc.log_uniform(*domain)
         self.perturb_power = perturb_power
+        if name == 'gamma':
+            self.perturb_power = 0.0015
         self.perturb_chance = perturb_chance
         self.history = deque([self._current_value], maxlen=int(self.history_max))
 
