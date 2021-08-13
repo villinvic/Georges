@@ -56,6 +56,9 @@ class Tournament(Default, Logger):
                 winner = np.argwhere(self.teams==p3)[0,0]
             elif result == 1 :
                 winner = np.argwhere(self.teams==p1)[0,0]
+            else:
+                p = np.random.choice([p1,p3])
+                winner = np.argwhere(self.teams==p)[0,0]
 
             if type=='pool':
                 self.pool_wins[winner] += 1

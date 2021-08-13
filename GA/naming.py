@@ -128,7 +128,6 @@ class Name:
         'MarthArm',
         'Botser',
         'Jigglybuff',
-        'MarioMario',
         'MarioLuigi',
         'DontTestMe',
         'BossTheme',

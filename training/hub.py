@@ -290,7 +290,7 @@ class Hub(Default, Logger):
 
                 current = time()
                 if current - self.last_update_time > self.pop_update_freq_minutes*60:
-                    current = self.last_update_time
+                    self.last_update_time = current
                     self.update_population()
 
                 if current - last_tournament_time > self.tournament_freq_minutes*60:
