@@ -359,7 +359,7 @@ class AC(tf.keras.Model, Default):
                 p = self.policy.get_probs(lstm_states[:, :-1])
                 kl = tf.divide(p, probs+1e-3)#tf.reduce_sum(p * tf.math.log(tf.divide(p, probs)), axis=-1)
                 indices = tf.concat(values=[self.pattern, self.range_, tf.expand_dims(actions, axis=2)], axis=2)
-                rho_mu = tf.maximum(10, tf.minimum(1., tf.gather_nd(kl, indices, batch_dims=0)))
+                rho_mu = tf.maximum(10., tf.minimum(1., tf.gather_nd(kl, indices, batch_dims=0)))
                 targets = self.compute_trace_targets(v_all, rewards, rho_mu, gamma)
                 #targets = self.compute_gae(v_all[:, :-1], rewards[:, :-1], v_all[:, -1])
                 advantage = tf.stop_gradient(targets) - v_all
