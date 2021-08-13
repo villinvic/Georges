@@ -136,10 +136,10 @@ class Arena(Default, Logger):
         self.logger.info('Arena %d closed' % self.id)
 
 
-        import pprint
-        for char in characters.available_chars:
-            print(char)
-            pprint.pprint(char.frame_data)
+        #import pprint
+        #for char in characters.available_chars:
+        #    print(char)
+            #pprint.pprint(char.frame_data)
 
         sys.exit(0)
 
