@@ -302,6 +302,8 @@ class AC(tf.keras.Model, Default):
             = self._train(tf.cast(training_params['entropy_cost'], tf.float32), tf.cast(training_params['gamma'], tf.float32),
                           tf.cast(as_entropy_scale, tf.float32), states, actions, rewards, probs, hidden_states, gpu)
 
+        print(v_loss, max_entropy, mean_entropy, grad_norm)
+
         tf.summary.scalar(name=log_name + "/v_loss", data=v_loss)
         tf.summary.scalar(name=log_name + "/as_ent", data=as_entropy)
         tf.summary.scalar(name=log_name + "/min_entropy", data=min_entropy)
