@@ -154,7 +154,7 @@ class EvolvingVariable(Default):
     def __init__(self, name, domain, perturb_power=0.2, perturb_chance=0.05, frozen=False):
         super(EvolvingVariable, self).__init__()
         self.name = name
-        self.domain = (10.**domain[0], 10.**domain[1])
+        self.domain = domain
         self._current_value = misc.log_uniform(*domain)
         self.perturb_power = perturb_power
         self.perturb_chance = perturb_chance
