@@ -614,7 +614,7 @@ class GameState:
                 target[PlayerState.size * 4:] = self.action()
 
         target *= self.scales
-        np.clip(target, -5, 5, out=target)
+        np.clip(target, -10, 10, out=target)
         np.nan_to_num(target)
 
     def init(self, amount=150):

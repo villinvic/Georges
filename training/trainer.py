@@ -142,7 +142,7 @@ class Trainer(Default, Logger):
                 self.trained[individual_index].data_used += self.BATCH_SIZE * self.TRAJECTORY_LENGTH
                 return True
             else:
-                print('Experience too old !', individual_index, self.train_cntr)
+                self.logger.debug('Experience too old !', individual_index, self.train_cntr)
 
         return False
 
