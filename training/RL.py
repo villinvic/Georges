@@ -302,7 +302,7 @@ class AC(tf.keras.Model, Default):
             = self._train(tf.cast(training_params['entropy_cost'], tf.float32), tf.cast(training_params['gamma'], tf.float32),
                           tf.cast(as_entropy_scale, tf.float32), states, actions, rewards, probs, hidden_states, gpu)
 
-        print(v_loss, min_entropy, max_entropy, mean_entropy, grad_norm)
+        print(v_loss, max_entropy, mean_entropy, grad_norm)
 
         tf.summary.scalar(name=log_name + "/v_loss", data=v_loss)
         tf.summary.scalar(name=log_name + "/as_ent", data=as_entropy)
@@ -361,7 +361,7 @@ class AC(tf.keras.Model, Default):
                 p = self.policy.get_probs(lstm_states[:, :-1])
                 kl = tf.divide(p, probs+1e-3)#tf.reduce_sum(p * tf.math.log(tf.divide(p, probs)), axis=-1)
                 indices = tf.concat(values=[self.pattern, self.range_, tf.expand_dims(actions, axis=2)], axis=2)
-                rho_mu = tf.maximum(10., tf.minimum(1., tf.gather_nd(kl, indices, batch_dims=0)))
+                rho_mu = tf.minimum(1., tf.gather_nd(kl, indices, batch_dims=0))
                 targets = self.compute_trace_targets(v_all, rewards, rho_mu, gamma)
                 #targets = self.compute_gae(v_all[:, :-1], rewards[:, :-1], v_all[:, -1])
                 advantage = tf.stop_gradient(targets) - v_all
@@ -398,7 +398,7 @@ class AC(tf.keras.Model, Default):
             mean_entropy = tf.reduce_mean(ent)
             min_entropy = tf.reduce_min(ent)
             max_entropy = tf.reduce_max(ent)
-            return v_loss, mean_entropy, tf.reduce_max(rho_mu), p_loss, tf.reduce_min(
+            return v_loss, mean_entropy, min_entropy, p_loss, tf.reduce_min(
                 p_log), tf.reduce_max(p_log), x, as_ent
 
     def compute_gae(self, v, rewards, last_v, gamma):
