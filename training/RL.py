@@ -284,7 +284,7 @@ class AC(tf.keras.Model, Default):
         self.p_optim = tf.keras.optimizers.SGD(learning_rate=1.)
 
         #self.optim = tf.keras.optimizers.RMSprop(rho=0.99, epsilon=1e-5) # Learning rate is affected when training
-        self.optim = tf.keras.optimizers.Adam(beta_1=0.9, beta_2=0.98, epsilon=1e-8)
+        self.optim = tf.keras.optimizers.Adam(beta_1=0.9, beta_2=0.98, epsilon=1e-8, clipvalue=4e-3)
 
         self.step = tf.Variable(0, dtype=tf.int32)
 
