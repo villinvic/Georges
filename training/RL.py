@@ -301,7 +301,7 @@ class AC(tf.keras.Model, Default):
         v_loss, mean_entropy, min_entropy, max_entropy, min_logp, max_logp, grad_norm, as_entropy \
             = self._train(tf.cast(training_params['entropy_cost'], tf.float32), tf.cast(training_params['gamma'], tf.float32),
                           tf.cast(as_entropy_scale, tf.float32), tf.convert_to_tensor(states, dtype=tf.float32),
-                          tf.convert_to_tensor(actions, dtype=tf.float32),
+                          tf.convert_to_tensor(actions, dtype=tf.int32),
                           tf.convert_to_tensor(rewards, dtype=tf.float32),
                           tf.convert_to_tensor(probs, dtype=tf.float32),
                           tf.convert_to_tensor(hidden_states, dtype=tf.float32),
@@ -327,8 +327,6 @@ class AC(tf.keras.Model, Default):
         '''
         Main training function
         '''
-
-
         with tf.device("/gpu:{}".format(gpu) if gpu >= 0 else "/cpu:0"):
 
             actions = tf.cast(actions, dtype=tf.int32)
@@ -386,7 +384,7 @@ class AC(tf.keras.Model, Default):
 
 
             if tf.abs(p_loss) > 5:
-                print('p_loss', p_loss)
+                tf.print('p_loss', p_loss)
 
             grad = tape.gradient(total_loss, self.policy.trainable_variables
                                  + self.V.trainable_variables
