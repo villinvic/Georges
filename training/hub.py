@@ -86,7 +86,7 @@ class Hub(Default, Logger):
         except zmq.ZMQError:
             pass
 
-        return None, None
+        return None, 'no_answer'
 
     def update_elos(self, p0, p1, p2, p3, result):
         mean_team1 = (self.population[p0].elo() + self.population[p1].elo()) / 2.
@@ -139,7 +139,10 @@ class Hub(Default, Logger):
         tournament_start_time = time()
         tournament = Tournament(self.POP_SIZE)
         for match in tournament():
-            type, msg = self.handle_actor_requests(tournament_match=match)
+            msg = 'no_answer'
+            while msg == 'no_answer':
+                type, msg = self.handle_actor_requests(tournament_match=match)
+
             if msg is not None:
                 tournament.step(type, *msg)
 
