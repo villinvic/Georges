@@ -223,10 +223,7 @@ class IndividualManager(Individual):
         if self.connection is not None:
                 arena_genes = self.connection.recv_params()
                 if arena_genes is None:
-                    print('failed')
                     return False
-
-                print('rcved')
                 self.set_arena_genes(arena_genes)
                 return True
         else:
