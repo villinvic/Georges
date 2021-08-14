@@ -170,7 +170,7 @@ class EvolvingVariable(Default):
     def perturb(self):
         if not self.frozen and np.random.random() < self.perturb_chance:
             if np.random.random() < self.reset_chance:
-                self._current_value = misc.log_uniform(self.domain)
+                self._current_value = misc.log_uniform(*self.domain)
             else:
                 perturbation = np.random.uniform(1.-self.perturb_power, 1.+self.perturb_power)
                 self._current_value = np.clip(perturbation * self._current_value, *self.domain) # clip ??
