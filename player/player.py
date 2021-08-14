@@ -87,7 +87,8 @@ class Player:
                     self.trajectory['time'] = time()
                     self.trajectory['hidden_states'][:] = hidden_h, hidden_c
 
-                    if self.trajectory_index > 0 and self.training_connection is not None:
+                    if self.trajectory_index > 0 and self.training_connection is not None \
+                            and not self.training_connection.ssh:
                         self.training_connection.send_exp(self.trajectory)
                         self.param_updater()
 
@@ -105,7 +106,7 @@ class Player:
                 self.trajectory['state'][traj_index:] = self.trajectory['state'][traj_index-1]
                 self.trajectory_index = 0
 
-                if self.training_connection is not None:
+                if self.training_connection is not None and not self.training_connection.ssh:
                     self.training_connection.send_exp(self.trajectory)
                     self.param_updater()
 

@@ -245,7 +245,7 @@ class Hub(Default, Logger):
             oldest = sorted(dirs)[0]
             _, _, files = next(os.walk(ckpt_path+oldest))
             for f in files:
-                if '.pkl' in f or '.params' in f:
+                if '.pkl' in f or '.params' in f or '.pdf' in f:
                     os.remove(ckpt_path+oldest+'/'+f)
             try:
                 os.rmdir(ckpt_path+oldest)

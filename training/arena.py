@@ -37,7 +37,7 @@ class Arena(Default, Logger):
 
         if ssh:
             self.connect = lambda socket: zmq_ssh.tunnel_connection(socket, "tcp://%s:%d" % (self.hub_ip, self.MATCH_PORT),
-                                  "isys3@%s" % self.hub_ip, password=ssh)
+                                  "isys3@%s" % self.hub_ip, password=ssh, timeout=0)
 
         else:
             self.connect = lambda socket: socket.connect("tcp://%s:%d" % (self.hub_ip, self.MATCH_PORT))
@@ -98,6 +98,7 @@ class Arena(Default, Logger):
             match_socket.send_pyobj(last_match_result + (self.obs_streaming,))
             if self.obs_streaming:
                 match_type, new_player_ids, pop_dict = match_socket.recv_pyobj()
+                print(match_type)
                 self.hub_pop_info.update(pop_dict)
                 self.update_stream_info(new_player_ids, pop_dict)
             else:
@@ -162,12 +163,15 @@ class TrainerConnection(Default):
 
         self.param_socket = zmq_c.socket(zmq.SUB)
         self.exp_socket = zmq_c.socket(zmq.PUSH)
+        self.ssh = ssh != ""
 
         if ssh:
             zmq_ssh.tunnel_connection(self.param_socket, "tcp://%s:%d" % (trainer_ip, self.param_port),
-                                      "isys3@%s:%d" % (trainer_ip, self.param_port), password=ssh)
+                                      "isys3@%s" % trainer_ip, password=ssh, timeout=30)
             zmq_ssh.tunnel_connection(self.exp_socket, "tcp://%s:%d" % (trainer_ip, self.exp_port),
-                                      "isys3@%s:%d" % (trainer_ip, self.exp_port), password=ssh)
+                                      "isys3@%s" % trainer_ip, password=ssh, timeout=30)
+            self.param_socket.setsockopt(zmq.RCVTIMEO, 15000)
+            self.param_socket.setsockopt(zmq.LINGER, 0)
         else:
             self.param_socket.connect("tcp://%s:%d" % (trainer_ip, self.param_port))
             self.exp_socket.connect("tcp://%s:%d" % (trainer_ip, self.exp_port))
@@ -179,7 +183,10 @@ class TrainerConnection(Default):
 
     def recv_params(self):
         try:
-            topic, data = self.param_socket.recv_multipart(zmq.NOBLOCK)
+            if self.ssh :
+                topic, data = self.param_socket.recv_multipart()
+            else:
+                topic, data = self.param_socket.recv_multipart(zmq.NOBLOCK)
             return pickle.loads(data)
         except zmq.ZMQError:
             pass
@@ -216,8 +223,10 @@ class IndividualManager(Individual):
         if self.connection is not None:
                 arena_genes = self.connection.recv_params()
                 if arena_genes is None:
+                    print('failed')
                     return False
 
+                print('rcved')
                 self.set_arena_genes(arena_genes)
                 return True
         else:
