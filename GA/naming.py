@@ -136,6 +136,7 @@ class Name:
         'CringeBoi',
         'TurboInt',
         'MegaMan',
+        'random fan420'
 
         'Georges',
     ])
