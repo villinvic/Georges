@@ -151,8 +151,6 @@ class Name:
             self._name = name
         else:
             component1, component2 = np.random.choice(self._all, 2)
-            x = self.clip_name_prefix(component1)
-            y = self.clip_name_suffix(component2)
             self._name = self.clip_name_prefix(component1) + self.clip_name_suffix(component2)
 
     @staticmethod
@@ -175,10 +173,14 @@ class Name:
         else:
             addition = other_names[1]._name
 
-        if np.random.random() < 0.5:
-            self._name = self.clip_name_prefix(other_names[0]._name, low=0.6, high=0.9) + self.clip_name_suffix(addition, low=0.2, high=0.6)
-        else:
-            self._name = self.clip_name_prefix(addition, low=0.2, high=0.6) + self.clip_name_suffix(other_names[0]._name, low=0.6, high=0.9)
+        self._name = ''
+        while self._name == '' or len(self._name) > 17:
+            if np.random.random() < 0.5:
+                self._name = self.clip_name_prefix(other_names[0]._name, low=0.1, high=0.9)\
+                             + self.clip_name_suffix(addition, low=0.1, high=0.9)
+            else:
+                self._name = self.clip_name_prefix(addition, low=0.1, high=0.9)\
+                             + self.clip_name_suffix(other_names[0]._name, low=0.1, high=0.9)
 
     def get(self):
         return self._name
