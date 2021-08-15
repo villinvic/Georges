@@ -115,8 +115,12 @@ class Individual:
         self.data_used = 0
         self.tournaments_won = 0
         self.lineage_prestige = 0
+        best_prestige = 0
         for parent in other_individuals:
-            self.lineage_prestige += parent.lineage_prestige + parent.tournaments_won
+            total_parent = parent.lineage_prestige + parent.tournaments_won
+            if total_parent > best_prestige:
+                best_prestige = total_parent
+        self.lineage_prestige = best_prestige
         self.birthday = datetime.today()
 
     def perturb(self):

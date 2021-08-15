@@ -147,7 +147,13 @@ class Arena(Default, Logger):
     # if we are streaming the arena
     def update_stream_info(self, player_ids, pop_dict):
         for i, player_id in enumerate(player_ids):
-            p_info = pop_dict[player_id]
+            if player_id == 28:
+                p_info = {
+                    'name': '20XX',
+                    'elo': 1000,
+                }
+            else:
+                p_info = pop_dict[player_id]
             comment = "[%s](%.0f)" % (p_info['name'], p_info['elo'])
             with open(self.stream_path.format(player_index=i), 'w+') as f:
                 f.write(comment)
