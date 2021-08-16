@@ -21,7 +21,7 @@ class Population:
         self.read_pickled_v = np.vectorize(lambda individual, x: individual.set_all(x))
 
     def ranking(self):
-        return sorted(self.individuals, key=lambda individual: individual.elo())
+        return sorted(self.individuals[:self.size], key=lambda individual: individual.elo())
 
     def __getitem__(self, item):
         return self.individuals[item]
