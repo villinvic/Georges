@@ -97,8 +97,6 @@ class Hub(Default, Logger):
         self.population[p2].elo.update(mean_team2, mean_team1, 1 - result)
         self.population[p3].elo.update(mean_team2, mean_team1, 1 - result)
 
-        print(self.population[p1].elo())
-
 
     def publicate_population(self):
         self.trainer_PUB.send_pyobj(self.population.to_serializable())
