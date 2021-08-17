@@ -1,5 +1,7 @@
 # GEORGES
 
+![](/img/Georges_example.png)
+
 ### Generating Evolutionary Opponents as a Reinforcement Guided Exploration Solution
 
 GEORGES experimentation on Super Smash Bros Melee , in 2 vs 2 official 
@@ -27,13 +29,11 @@ to train individuals, continuously, on top of the GA operators, from generated e
 games simulated on [Dolphin](https://github.com/dolphin-emu/dolphin).
 
 ### Current Project status
-
-In developpement,
-Testing phase starting soon.
+In testing phase.
 
 ### Live demonstration
 
-TBA
+Soon.
 
 ## References
 
