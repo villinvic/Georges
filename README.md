@@ -1,6 +1,6 @@
 # GEORGES
 
-![](/img/Georges_example.png)
+![](https://github.com/villinvic/Georges/blob/main/imgs/Georges_example.png)
 
 ### Generating Evolutionary Opponents as a Reinforcement Guided Exploration Solution
 
