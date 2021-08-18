@@ -12,6 +12,7 @@ class Rewards:
         'kill': PlayerState.scales[PlayerState.indexes['stocks']],
         'death': PlayerState.scales[PlayerState.indexes['stocks']],
         'death_ally': PlayerState.scales[PlayerState.indexes['stocks']],
+        'distance': PlayerState.scales[PlayerState.indexes['x']],
         'win': 1.,
     }
 
@@ -68,6 +69,17 @@ class Rewards:
 
         self['death'] = -np.maximum(states[:, :-1, GameState.indexes['p0_stocks']] - states[:, 1:, GameState.indexes['p0_stocks']], 0.)
         self['death_ally'] = -np.maximum(states[:, :-1, GameState.indexes['p1_stocks']] - states[:, 1:, GameState.indexes['p1_stocks']], 0.)
+
+        dp2 = np.sqrt( np.square(states[:, 1:, GameState.indexes['p2_x']] - states[:, 1:, GameState.indexes['p0_x']] )
+                                    + np.square(states[:, 1:, GameState.indexes['p2_y']] - states[:, 1:, GameState.indexes['p0_y']])) \
+                           - np.sqrt( np.square(states[:, :-1, GameState.indexes['p2_x']] - states[:, :-1, GameState.indexes['p0_x']])
+                                    + np.square(states[:, :-1, GameState.indexes['p2_y']] - states[:, :-1, GameState.indexes['p0_y']]))
+        dp3 = np.sqrt(np.square(states[:, 1:, GameState.indexes['p3_x']] - states[:, 1:, GameState.indexes['p0_x']] )
+                                    + np.square(states[:, 1:, GameState.indexes['p3_y']] - states[:, 1:, GameState.indexes['p0_y']])) \
+                           - np.sqrt( np.square(states[:, :-1, GameState.indexes['p3_x']] - states[:, :-1, GameState.indexes['p0_x']])
+                                    + np.square(states[:, :-1, GameState.indexes['p3_y']] - states[:, :-1, GameState.indexes['p0_y']]))
+
+        self['distance'] = np.maximum(dp2, dp3)
 
         win = np.logical_and(
             states[:, 1:, GameState.indexes['p2_stocks']] + states[:, 1:, GameState.indexes['p3_stocks']] < 1e-4,

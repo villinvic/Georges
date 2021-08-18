@@ -18,6 +18,7 @@ from game.console import Console
 from population.individual import Individual
 from characters import characters
 from game.enums import PlayerType
+from visualization.parameters import IndividualVisualizer
 
 
 class Arena(Default, Logger):
@@ -59,6 +60,7 @@ class Arena(Default, Logger):
         self.obs_streaming = obs_streaming
         if obs_streaming:
             self.stream_path = "obs/match_info{player_index}.txt"
+            self.individual_visualizer = IndividualVisualizer()
 
         else:
             self.stream_path = None
@@ -87,6 +89,8 @@ class Arena(Default, Logger):
             sleep(1.)
             if tries > 30 :
                 self.logger.warning('CANT ACCESS TRAINER')
+
+        self.individual_visualizer.observe(self.players[0])
 
     @zmq.decorators.socket(zmq.REQ)
     def request_match(self, match_socket, last_match_result=(None, (None, None, None, None, None))):
@@ -157,6 +161,7 @@ class Arena(Default, Logger):
             comment = "[%s](%.0f)" % (p_info['name'], p_info['elo'])
             with open(self.stream_path.format(player_index=i), 'w+') as f:
                 f.write(comment)
+
 
 class TrainerConnection(Default):
     def __init__(self, individual_id, trainer_ip, ssh, zmq_c: zmq.Context):
