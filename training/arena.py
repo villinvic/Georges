@@ -90,7 +90,8 @@ class Arena(Default, Logger):
             if tries > 30 :
                 self.logger.warning('CANT ACCESS TRAINER')
 
-        self.individual_visualizer.observe(self.players[0])
+        if self.obs_streaming:
+            self.individual_visualizer.observe(self.players[0])
 
     @zmq.decorators.socket(zmq.REQ)
     def request_match(self, match_socket, last_match_result=(None, (None, None, None, None, None))):
