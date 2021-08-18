@@ -51,7 +51,5 @@ class Default:
                 setattr(self, k.upper(), self.types[t](value))
 
         super(Default, self).__init__()
-
         del self.config
-
 
