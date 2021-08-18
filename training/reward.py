@@ -56,8 +56,8 @@ class Rewards:
         'win'
         """
 
-        combo_p2_multiplier = np.float32(states[:, 1:, GameState.indexes['p2_hitstun_left']] >= 1) * reward_shape['combo']
-        combo_p3_multiplier = np.float32(states[:, 1:, GameState.indexes['p3_hitstun_left']] >= 1) * reward_shape['combo']
+        combo_p2_multiplier = 1.+ np.float32(states[:, 1:, GameState.indexes['p2_hitstun_left']] >= 1) * reward_shape['combo']
+        combo_p3_multiplier = 1.+ np.float32(states[:, 1:, GameState.indexes['p3_hitstun_left']] >= 1) * reward_shape['combo']
 
         self['hit_dmg'] =  (np.maximum(states[:, 1:, GameState.indexes['p2_percent']] - states[:, :-1, GameState.indexes['p2_percent']], 0.) * combo_p2_multiplier +
                    np.maximum(states[:, 1:, GameState.indexes['p3_percent']] - states[:, :-1, GameState.indexes['p3_percent']], 0.) * combo_p3_multiplier)
