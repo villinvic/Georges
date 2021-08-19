@@ -231,10 +231,12 @@ class Hub(Default, Logger):
 
         ckpt_path = 'checkpoints/'+self.running_instance_identifier+'/'
         full_path = ckpt_path + 'ckpt_' + str(self.population.checkpoint_index) + '/'
+        print(full_path)
         self.population.checkpoint_index += 1
         if not os.path.exists(full_path):
             try:
                 os.makedirs(full_path)
+                print('ehre')
             except OSError as exc:
                 print(exc)
 
