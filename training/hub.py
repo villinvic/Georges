@@ -245,8 +245,7 @@ class Hub(Default, Logger):
 
         _, dirs, _ = next(os.walk(ckpt_path))
         if len(dirs) > self.ckpt_keep:
-            oldest = sorted(dirs)[0]
-            print(oldest)
+            oldest = sorted(dirs, key=lambda dir: int(dir.split('ckpt_')[-1]))[0]
             _, _, files = next(os.walk(ckpt_path+oldest))
             for f in files:
                 if '.pkl' in f or '.params' in f or '.pdf' in f:
