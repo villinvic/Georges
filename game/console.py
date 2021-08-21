@@ -63,7 +63,7 @@ class Console:
             frames += 1
 
 
-        self.players.finalize()
+        self.players.finalize(self.state)
         self.dolphin.close()
         self.state.mw.unbind()
         self.players.disconnect_pads()

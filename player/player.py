@@ -1,5 +1,6 @@
 from GA.ranking import Elo
 from game.enums import PlayerType
+from game.state import GameState
 from characters.characters import Character
 from input.pad import Pad
 from input.enums import Button
@@ -48,6 +49,8 @@ class Player:
         self.action_queue = deque()
         self.individual = None
 
+        self.is_dead = False
+
     def attribute_individual(self, individual):
         self.char = individual.char().get()
         self.type = individual.type
@@ -64,11 +67,15 @@ class Player:
     def press_A(self):
         self.pad.press_button(Button.A)
 
+    def update_death(self):
+        self.is_dead = self.trajectory['state'][self.trajectory_index % self.trajectory_length][GameState.stock_indexes[0]] == 0
+
     def act(self, state):
         if self.type == PlayerType.Human:
-            if not self.action_queue:
+            if not self.action_queue and not self.is_dead:
                 traj_index = self.trajectory_index % self.trajectory_length
                 state.get(self.trajectory['state'][traj_index], self.index, self.last_action_id)
+                self.update_death()
 
                 action_id, distribution, hidden_h, hidden_c = self.policy(self.trajectory['state'][traj_index])
                 if action_id >= self.action_space.dim:
@@ -94,16 +101,18 @@ class Player:
 
                 self.trajectory_index += 1
 
-            if state.frame >= self.next_possible_move_frame:
+            if not self.is_dead and state.frame >= self.next_possible_move_frame:
                 action = self.action_queue.pop()
                 self.next_possible_move_frame = state.frame + action['duration']
                 action.send_controller(self.pad)
 
-    def finalize(self):
+    def finalize(self, state):
         if self.type == PlayerType.Human:
             traj_index = self.trajectory_index % self.trajectory_length
             if traj_index>0:
-                self.trajectory['state'][traj_index:] = self.trajectory['state'][traj_index-1]
+                state.get(self.trajectory['state'][traj_index], self.index, self.last_action_id)
+                if traj_index < self.trajectory_length-1:
+                    self.trajectory['state'][traj_index+1:] = self.trajectory['state'][traj_index]
                 self.trajectory_index = 0
 
                 if self.training_connection is not None and not self.training_connection.ssh:
@@ -112,6 +121,18 @@ class Player:
 
             self.action_queue.clear()
             self.next_possible_move_frame = -np.inf
+            self.is_dead = False
+
+            #from training.reward import Rewards
+            #from GA.genotype import RewardShape
+
+            #r_shape = RewardShape()
+            #for variable in r_shape._variables.values():
+            #    variable._current_value = 0.01
+
+            #r_shape._variables['win']._current_value = 100
+            #r = Rewards(1, self.trajectory_length)
+            #print(r.compute(self.trajectory['state'][np.newaxis, :], r_shape))
 
 
 class PlayerGroup:
@@ -144,9 +165,9 @@ class PlayerGroup:
         for player in self.players:
             player.act(state)
 
-    def finalize(self):
+    def finalize(self, state):
         for player in self.players:
-            player.finalize()
+            player.finalize(state)
 
     def __getitem__(self, item):
         return self.players[item]
