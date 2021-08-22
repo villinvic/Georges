@@ -181,6 +181,7 @@ class Hub(Default, Logger):
 
                     self.logger.debug('To...')
                     self.logger.debug(individual)
+                    individual.mean_entropy = np.log(individual.genotype['type'].get().action_space.dim)
 
                     evolved.append(individual.get_all())
                 else :
