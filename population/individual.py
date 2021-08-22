@@ -78,10 +78,11 @@ class Individual:
         return dict(
             id=self.id,
             data_used=self.data_used,
+            reset_data=True,
         )
 
     def set_all(self, params, check_age=False, trainable=True):
-        if "reset_data" in params.keys():
+        if 'reset_data' in params.keys() and params['reset_data']:
             self.data_used = params['data_used']
             return
         if not check_age or params['birthday'] >= self.birthday - timedelta(minutes=1):
