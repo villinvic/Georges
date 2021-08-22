@@ -84,7 +84,7 @@ class Arena(Default, Logger):
         while not np.all(successes):
             for i, player in enumerate(self.players):
                 if not successes[i]:
-                    successes[i] = player.update_params()
+                    successes[i] = player.update_params(init=True)
             tries += 1
             sleep(1.)
             if tries > 30 :
@@ -228,8 +228,8 @@ class IndividualManager(Individual):
     def close_connection(self):
         self.connection.close()
 
-    def update_params(self):
-        if self.genotype['brain'] is not None:
+    def update_params(self, init=False):
+        if init and self.genotype['brain'] is not None:
             if self.genotype['brain'].has_lstm:
                 self.genotype['brain'].lstm.reset_states()
         if self.connection is not None:
