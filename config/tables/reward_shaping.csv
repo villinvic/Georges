@@ -1,11 +1,11 @@
 name, lower_bound, higher_bound
-"hit_dmg", 1e-3, 0.05
-"hurt_dmg", 1e-3, 0.05
-"hurt_ally_dmg", 1e-3, 0.05
+"hit_dmg", 2e-3, 0.05
+"hurt_dmg", 2e-3, 0.05
+"hurt_ally_dmg", 2e-3, 0.05
 "kill", 0.5, 5
 "death", 0.5, 5
 "death_ally", 0.5, 5
-"win", 1, 100
-"combo", 1, 5
+"win", 1, 10
+"combo", 0.25, 3
 "action_state_entropy", 2e-5, 1e-2
 "distance", 1e-6, 1e-2
