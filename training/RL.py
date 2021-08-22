@@ -318,6 +318,8 @@ class AC(tf.keras.Model, Default):
         #tf.summary.scalar(name="misc/distance", data=tf.reduce_mean(states[:, :, -1]))
         tf.summary.scalar(name=log_name + "/reward", data=tf.reduce_sum(tf.reduce_mean(rewards, axis=0)))
 
+        return mean_entropy
+
 
     @tf.function
     def _train(self, alpha, gamma, as_entropy_scale, states, actions, rewards, probs, hidden_states, gpu):

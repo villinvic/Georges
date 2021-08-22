@@ -136,7 +136,8 @@ class Trainer(Default, Logger):
                     training_params = self.trained[individual_index].genotype['learning']
                     as_entropy_scale = self.trained[individual_index].genotype['experience']['action_state_entropy']
 
-                    self.trained[individual_index].genotype['brain'].train(name, training_params, as_entropy_scale,
+                    self.trained[individual_index].mean_entropy =\
+                        self.trained[individual_index].genotype['brain'].train(name, training_params, as_entropy_scale,
                                                                         states, actions, rews, probs, hidden_states, 0)
 
                 self.trained[individual_index].data_used += self.BATCH_SIZE * self.TRAJECTORY_LENGTH

@@ -74,7 +74,16 @@ class Individual:
 
         )
 
+    def get_data_used(self):
+        return dict(
+            id=self.id,
+            data_used=self.data_used,
+        )
+
     def set_all(self, params, check_age=False, trainable=True):
+        if "reset_data" in params.keys():
+            self.data_used = params['data_used']
+            return
         if not check_age or params['birthday'] >= self.birthday - timedelta(minutes=1):
             if not check_age:
                 self.type = params['type']

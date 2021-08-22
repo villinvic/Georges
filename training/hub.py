@@ -183,6 +183,8 @@ class Hub(Default, Logger):
                     self.logger.debug(individual)
 
                     evolved.append(individual.get_all())
+                else :
+                    evolved.append(individual.get_data_used())
 
         if evolved:
             self.trainer_PUB.send_pyobj(evolved)
