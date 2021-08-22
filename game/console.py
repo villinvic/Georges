@@ -51,7 +51,7 @@ class Console:
             # data required : time of traj, states, actions, probabilities
             done, result = self.state.update()
             if result is None:
-                self.players.finalize()
+                self.players.finalize(self.state)
                 self.dolphin.close()
                 self.state.mw.unbind()
                 self.players.disconnect_pads()
