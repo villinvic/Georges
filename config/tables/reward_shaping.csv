@@ -8,4 +8,4 @@ name, lower_bound, higher_bound
 "win", 1, 10
 "combo", 0.25, 3
 "action_state_entropy", 2e-5, 1e-2
-"distance", 1e-6, 1e-2
+"distance", 1e-6, 1e-3
