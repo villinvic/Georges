@@ -157,6 +157,7 @@ class Hub(Default, Logger):
 
         worst_individual = self.population.ranking()[0]
         worst_individual.inerit_from(self.population[w1], self.population[w2]) # worst individual gets replaced by a crossover between the two winners
+        worst_individual.perturb()
         self.trainer_PUB.send_pyobj([worst_individual.get_all()])
 
     def evolve(self):
