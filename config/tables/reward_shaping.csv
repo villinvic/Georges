@@ -7,5 +7,5 @@ name, lower_bound, higher_bound
 "death_ally", 0.5, 5
 "win", 1, 10
 "combo", 0.25, 3
-"action_state_entropy", 2e-5, 1e-2
+"action_state_entropy", 1e-4, 1e-2
 "distance", 1e-6, 1e-3
