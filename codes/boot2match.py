@@ -22,26 +22,46 @@ FFFFFFFF 00000000
 00000000 00000000
 00000000 {char1}{player1}04{costume1}
 00FF0000 09007800 # 78>77
-400004{cpu1} 00000000
+400002{cpu1} 00000000
 00000000 3F800000
 3F800000 3F800000
 {char2}{player2}04{costume2} 00FF0000
-09007800 400004{cpu2}
+09007800 400002{cpu2}
 00000000 00000000
 3F800000 3F800000
 3F800000 {char3}{player3}04{costume3}
 00FF0000 09007800
-400004{cpu3} 00000000
+400002{cpu3} 00000000
 00000000 3F800000
 3F800000 3F800000
 {char4}{player4}04{costume4} 00FF0000
-09007800 400004{cpu4}
+09007800 400002{cpu4}
 00000000 00000000
 3F800000 3F800000
 3F800000 BB610014
 60000000 00000000
 """
 
+"""
+.set CPUType_Stay,0x0
+.set CPUType_Escape,0x2
+.set CPUType_Jump,0x3
+.set CPUType_Normal,0x4
+.set CPUType_Normal2,0x5
+.set CPUType_Nana,0x6
+.set CPUType_Defensive,0x7
+.set CPUType_Struggle,0x8
+.set CPUType_Freak,0x9
+.set CPUType_Cooperate,0xA
+.set CPUType_SpLwLink,0xB
+.set CPUType_SpLwSamus,0xC
+.set CPUType_OnlyItem,0xD
+.set CPUType_EvZelda,0xE
+.set CPUType_NoAct,0xF
+.set CPUType_Air,0x10
+.set CPUType_Item,0x11
+.set CPUType_GuardEdge,0x12
+"""
 
 
 char_ids = {
