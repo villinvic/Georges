@@ -156,8 +156,10 @@ class Hub(Default, Logger):
         self.population[w2].tournaments_won += 1
 
         worst_individual = self.population.ranking()[0]
+        names = self.population.names()
         worst_individual.inerit_from(self.population[w1], self.population[w2]) # worst individual gets replaced by a crossover between the two winners
-        while worst_individual.name.get() in self.population.names():
+
+        while worst_individual.name.get() in names:
             worst_individual.name.inerit_from(worst_individual.name)
 
         worst_individual.perturb()
@@ -180,8 +182,9 @@ class Hub(Default, Logger):
                     self.logger.debug('From...')
                     self.logger.debug(individual)
 
+                    names = self.population.names()
                     individual.inerit_from(other)
-                    while individual.name.get() in self.population.names():
+                    while individual.name.get() in names:
                         individual.name.inerit_from(individual.name)
                     individual.perturb()
 
