@@ -87,16 +87,14 @@ class Population:
         if path[-1] != '/':
             path += '/'
         _, _, ckpts = next(os.walk(path))
-        pop_index = 0
         for ckpt in ckpts:
             if '.pkl' in ckpt:
                 try:
                     with open(path + ckpt, 'rb') as f:
-                        self[pop_index].set_all(pickle.load(f))
-                        self[pop_index].id = pop_index
+                        data = pickle.load(f)
+                        self[data['id']].set_all(data)
                 except Exception as e:
                     print(e)
-                pop_index += 1
         try:
             with open(path + 'population.params',
                       'r') as json_file:
