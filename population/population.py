@@ -87,12 +87,17 @@ class Population:
         if path[-1] != '/':
             path += '/'
         _, _, ckpts = next(os.walk(path))
+        loaded = []
         for ckpt in ckpts:
             if '.pkl' in ckpt:
                 try:
                     with open(path + ckpt, 'rb') as f:
                         data = pickle.load(f)
-                        self[data['id']].set_all(data)
+                        if data['id'] in loaded:
+                            print('Duplicated id ?')
+                        else:
+                            self[data['id']].set_all(data)
+                            loaded.append(data['id'])
                 except Exception as e:
                     print(e)
         try:
