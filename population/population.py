@@ -93,6 +93,7 @@ class Population:
                 try:
                     with open(path + ckpt, 'rb') as f:
                         self[pop_index].set_all(pickle.load(f))
+                        self[pop_index].id = pop_index
                 except Exception as e:
                     print(e)
                 pop_index += 1
