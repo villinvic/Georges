@@ -158,14 +158,24 @@ class Name:
         l = floor(np.clip(len(name)*low, 1, np.inf))
         h = ceil(len(name)*high + 1)
 
-        return name[:np.random.randint(l, h)]
+        if l == h :
+            x = l
+        else:
+            x = np.random.randint(l, h)
+
+        return name[:x]
 
     @staticmethod
     def clip_name_suffix(name, low=0.3, high=0.7):
         l = floor(np.clip(len(name) * (1-high), 1, np.inf))
         h = ceil(len(name ) * (1-low) + 1)
 
-        return name[np.random.randint(l, h):]
+        if l == h :
+            x = l
+        else:
+            x = np.random.randint(l, h)
+
+        return name[x:]
 
     def inerit_from(self, *other_names):
         if len(other_names) == 1:
