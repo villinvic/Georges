@@ -66,6 +66,10 @@ class Population:
     def read_pickled(self, params):
         self.read_pickled_v(self.individuals[:self.size], params)
 
+
+    def names(self):
+        return [p.name.get() for p in self]
+
     def save(self, path):
         for individual in self:
             with open(path + individual.name.get() + '.pkl',

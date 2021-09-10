@@ -176,11 +176,11 @@ class Name:
         self._name = ''
         while self._name == '' or len(self._name) > 17:
             if np.random.random() < 0.5:
-                self._name = self.clip_name_prefix(other_names[0]._name, low=0.1, high=0.9)\
-                             + self.clip_name_suffix(addition, low=0.1, high=0.9)
+                self._name = self.clip_name_prefix(other_names[0]._name, low=0.25, high=0.75)\
+                             + self.clip_name_suffix(addition, low=0.25, high=0.75)
             else:
-                self._name = self.clip_name_prefix(addition, low=0.1, high=0.9)\
-                             + self.clip_name_suffix(other_names[0]._name, low=0.1, high=0.9)
+                self._name = self.clip_name_prefix(addition, low=0.25, high=0.75)\
+                             + self.clip_name_suffix(other_names[0]._name, low=0.25, high=0.75)
 
     def get(self):
         return self._name
