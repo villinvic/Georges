@@ -219,6 +219,7 @@ class Hub(Default, Logger):
 
         for trainer in self.trainers:
             trainer.wait()
+            print(trainer.returncode)
 
         self.save()
 
