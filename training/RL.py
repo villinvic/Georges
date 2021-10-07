@@ -480,6 +480,7 @@ class AC(tf.keras.Model, Default):
     def init_body(self, lstm):
         if self.has_lstm:
             lstm = self.lstm(lstm)
+        lstm = self.dense_body(lstm)
         x = self.policy.get_probs(lstm[:, 1:])
         self.V(lstm)
         
