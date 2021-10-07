@@ -179,10 +179,10 @@ class TrainerConnection(Default):
 
         if ssh:
             zmq_ssh.tunnel_connection(self.param_socket, "tcp://%s:%d" % (trainer_ip, self.param_port),
-                                      "isys3@%s" % trainer_ip, password=ssh, timeout=30)
+                                      "isys3@%s" % trainer_ip, password=ssh, timeout=15)
             zmq_ssh.tunnel_connection(self.exp_socket, "tcp://%s:%d" % (trainer_ip, self.exp_port),
-                                      "isys3@%s" % trainer_ip, password=ssh, timeout=30)
-            self.param_socket.setsockopt(zmq.RCVTIMEO, 15000)
+                                      "isys3@%s" % trainer_ip, password=ssh, timeout=15)
+            self.param_socket.setsockopt(zmq.RCVTIMEO, 40000)
             self.param_socket.setsockopt(zmq.LINGER, 0)
         else:
             self.param_socket.connect("tcp://%s:%d" % (trainer_ip, self.param_port))

@@ -278,8 +278,9 @@ class AC(tf.keras.Model, Default):
         else:
             self.lstm = LSTM(lstm_dim, time_major=False, dtype='float32', stateful=False, return_sequences=True,
                          return_state=False, name='lstm')
-        self.V = V(layer_dims)
-        self.policy = CategoricalActor(action_dim, self.epsilon_greedy, layer_dims)
+        self.dense_body = Dense(layer_dims[0], activation='elu', dtype='float32')
+        self.V = V(layer_dims[1:])
+        self.policy = CategoricalActor(action_dim, self.epsilon_greedy, layer_dims[1:])
         self.as_probs = ActionStateProbs()
         self.p_optim = tf.keras.optimizers.SGD(learning_rate=1.)
 
@@ -359,6 +360,7 @@ class AC(tf.keras.Model, Default):
                     lstm_states = self.lstm(states, initial_state=[hidden[:,0],hidden[:, 1]])
                 else:
                     lstm_states = states
+                lstm_states = self.dense_body(lstm_states)
 
                 v_all = self.V(lstm_states)[: ,:, 0]
                 p = self.policy.get_probs(lstm_states[:, :-1])
@@ -382,7 +384,7 @@ class AC(tf.keras.Model, Default):
 
                 total_loss = 0.5 * v_loss + p_loss
 
-            grad = tape.gradient(total_loss, self.policy.trainable_variables
+            grad = tape.gradient(total_loss, self.policy.trainable_variables + self.dense_body.trainable_variables
                                  + self.V.trainable_variables
                                  + self.lstm.trainable_variables)
 
@@ -394,7 +396,7 @@ class AC(tf.keras.Model, Default):
                 x += tf.reduce_mean(tf.abs(gg))
             x /= c
 
-            self.optim.apply_gradients(zip(grad, self.policy.trainable_variables
+            self.optim.apply_gradients(zip(grad, self.policy.trainable_variables + self.dense_body.trainable_variables
                                            + self.V.trainable_variables + self.lstm.trainable_variables))
 
             self.step.assign_add(1)
@@ -440,7 +442,7 @@ class AC(tf.keras.Model, Default):
         return tf.concat([returns, tf.expand_dims(last_vr, axis=1)], axis=1)
 
     def get_params(self):
-        actor_weights = [dense.get_weights() for dense in self.policy.denses]
+        actor_weights = [dense.get_weights() for dense in [self.dense_body] + self.policy.denses]
         return {
             'lstm': self.lstm.get_weights() if self.has_lstm else None,
             'actor_core': actor_weights,
@@ -452,6 +454,7 @@ class AC(tf.keras.Model, Default):
         value_weights = [dense.get_weights() for dense in self.V.denses]
         return {
             'lstm'      : self.lstm.get_weights() if self.has_lstm else None,
+            'dense_body': self.dense_body.get_weights(),
             'actor_core': actor_weights,
             'actor_head': self.policy.prob.get_weights(),
             'value_core': value_weights,
@@ -462,6 +465,7 @@ class AC(tf.keras.Model, Default):
 
         if self.has_lstm:
             self.lstm.set_weights(params['lstm'])
+        self.dense_body.set_weights(params['dense_body'])
         for dense_layer_weights, dense in zip(params['actor_core'], self.policy.denses):
             dense.set_weights(dense_layer_weights)
         self.policy.prob.set_weights(params['actor_head'])
@@ -504,6 +508,21 @@ class AC(tf.keras.Model, Default):
                     elif c + len(parents[0]['lstm'][i]) >= cross_point:
                         parents[0]['lstm'][i][cross_point - c:] = parents[1]['lstm'][i][cross_point - c:]
                     c += len(parents[0]['lstm'][i])
+
+            for i in range(len(parents[0]['dense_body'])):
+                if parents[0]['dense_body'][i].ndim > 1:
+                    for j in range(len(parents[0]['dense_body'][i])):
+                        if c > cross_point:
+                            parents[0]['dense_body'][i][j][:] = parents[1]['dense_body'][i][j]
+                        elif c + len(parents[0]['dense_body'][i][j]) >= cross_point:
+                            parents[0]['dense_body'][i][j][cross_point - c:] = parents[1]['dense_body'][i][j][cross_point - c:]
+                        c += len(parents[0]['dense_body'][i][j])
+                else:
+                    if c > cross_point:
+                        parents[0]['dense_body'][i][:] = parents[1]['dense_body'][i]
+                    elif c + len(parents[0]['dense_body'][i]) >= cross_point:
+                        parents[0]['dense_body'][i][cross_point - c:] = parents[1]['dense_body'][i][cross_point - c:]
+                    c += len(parents[0]['dense_body'][i])
 
             for i in range(len(parents[0]['actor_core'])):
                 for j in range(len(parents[0]['actor_core'][i])):
