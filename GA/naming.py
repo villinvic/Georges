@@ -135,7 +135,7 @@ class Name:
         'taking out trash',
         'CringeBoi',
         'TurboInt',
-        'MegaMan',
+        'Megaman',
         'random fan420'
 
         'Georges',

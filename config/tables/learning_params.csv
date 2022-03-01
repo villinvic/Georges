@@ -1,4 +1,4 @@
 name, lower_bound, higher_bound
-"learning_rate", 5e-5, 7e-4
+"learning_rate", 5e-5, 5e-4
 "entropy_cost", 4e-4, 5e-3
 "gamma", 0.992, 0.997

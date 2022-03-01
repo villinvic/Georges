@@ -72,11 +72,11 @@ class Rewards:
 
         dp2 = -np.sqrt( np.square(states[:, 1:, GameState.indexes['p2_x']] - states[:, 1:, GameState.indexes['p0_x']] )
                                     + np.square(states[:, 1:, GameState.indexes['p2_y']] - states[:, 1:, GameState.indexes['p0_y']])) \
-                           - np.sqrt( np.square(states[:, :-1, GameState.indexes['p2_x']] - states[:, :-1, GameState.indexes['p0_x']])
+                           + np.sqrt( np.square(states[:, :-1, GameState.indexes['p2_x']] - states[:, :-1, GameState.indexes['p0_x']])
                                     + np.square(states[:, :-1, GameState.indexes['p2_y']] - states[:, :-1, GameState.indexes['p0_y']]))
         dp3 = -np.sqrt(np.square(states[:, 1:, GameState.indexes['p3_x']] - states[:, 1:, GameState.indexes['p0_x']] )
                                     + np.square(states[:, 1:, GameState.indexes['p3_y']] - states[:, 1:, GameState.indexes['p0_y']])) \
-                           - np.sqrt( np.square(states[:, :-1, GameState.indexes['p3_x']] - states[:, :-1, GameState.indexes['p0_x']])
+                           + np.sqrt( np.square(states[:, :-1, GameState.indexes['p3_x']] - states[:, :-1, GameState.indexes['p0_x']])
                                     + np.square(states[:, :-1, GameState.indexes['p3_y']] - states[:, :-1, GameState.indexes['p0_y']]))
 
         self['distance'] = np.maximum(dp2, dp3)

@@ -1,7 +1,10 @@
 import numpy as np
+import tensorflow as tf
+from sklearn.preprocessing import StandardScaler
 
 from config.loader import Default
 from GA import misc
+
 from characters.characters import Mario, available_chars, enum2index
 from training.RL import Policy, AC
 from collections import deque
@@ -74,13 +77,12 @@ class Genotype(Default):
         return c
 
     def set_params(self, new_genes, trainable=False):
-        for key in self._base_keys:
-            self._genes[key] = new_genes[key]
         if trainable:
             self._genes['brain'].set_training_params(new_genes['brain'])
         else:
             self._genes['brain'].set_params(new_genes['brain'])
-
+        for key in self._base_keys:
+            self._genes[key] = new_genes[key]
     def __repr__(self):
         return self._genes.__repr__()
 
@@ -90,15 +92,13 @@ class Genotype(Default):
     def __setitem__(self, key, value):
         self._genes[key] = value
 
-    def crossover(self, other_genotype):
-        genes = self.get_params(full_brain=True)
-        for gene_family, other_gene_family in zip(genes.values(), other_genotype._genes.values()):
+    def crossover(self, other_genotype, target_genotype):
+        genes = self.get_params(trainable=True)
+        target_genotype.set_params(genes, trainable=True)
+
+        for gene_family, other_gene_family in zip(target_genotype._genes.values(), other_genotype._genes.values()):
             if gene_family is not None:
                 gene_family.crossover(other_gene_family)
-
-        genes['brain'] = genes['brain'].get_training_params()
-
-        return genes
 
 
 
@@ -155,8 +155,12 @@ class EvolvingVariable(Default):
     def __init__(self, name, domain, perturb_power=0.2, perturb_chance=0.05, reset_chance=0.1, frozen=False):
         super(EvolvingVariable, self).__init__()
         self.name = name
-        self.domain = domain
-        self._current_value = misc.log_uniform(*domain)
+        if 0. in domain:
+            self.domain = (0, 0)
+            self._current_value = 0.
+        else:
+            self.domain = domain
+            self._current_value = misc.log_uniform(*domain)
         self.perturb_power = perturb_power
 
         if name == 'gamma':
@@ -169,16 +173,18 @@ class EvolvingVariable(Default):
 
     def perturb(self):
         if not self.frozen and np.random.random() < self.perturb_chance:
-            if np.random.random() < self.reset_chance:
+            if np.random.random() < self.reset_chance and 0. not in self.domain:
                 self._current_value = misc.log_uniform(*self.domain)
             else:
-                perturbation = np.random.uniform(1.-self.perturb_power, 1.+self.perturb_power)
-                self._current_value = np.clip(perturbation * self._current_value, *self.domain) # clip ??
+                perturbation = np.random.choice([1. - self.perturb_power, 1. + self.perturb_power])
+                self._current_value = np.clip(perturbation * self._current_value, *self.domain)  # clip ??
             self.history.append(self._current_value)
 
     def crossover(self, other_variable):
-        if np.random.random() < 0.5:
-            self._current_value = other_variable._current_value
+        t = np.random.uniform(-.1, 1.1)
+        self._current_value = np.clip((1 - t) * self._current_value + t * other_variable._current_value, *self.domain)
+        #if np.random.random() < 0.5:
+        #    self._current_value = other_variable._current_value
 
     def freeze(self):
         self.frozen = True
@@ -240,4 +246,95 @@ class EvolvingCharacter(Default):
         new.history = deepcopy(self.history)
 
         return new
+
+
+# NN crossover
+
+def nn_crossover(a, b, architecture={}):
+    pairs = [pairwise_cross_corr(ax, bx) for ax,bx in zip(a,b)]
+    W_permuted = [np.zeros((2,)+ax.shape, dtype=np.float32) for ax in a]
+    for layer_index, previous_index in architecture.items():
+        if previous_index is not None:
+            W_permuted[layer_index][:, :-1, :] = a[layer_index][pairs[previous_index][0], :], b[layer_index][pairs[previous_index][1], :]
+
+        layer_crossover(a, b, pairs[layer_index], layer_index, previous_index, W_permuted[layer_index])
+
+    offspring = [(safe_crossover(*np.rollaxis(W_permuted[d], 0))) for d in range(len(a))]
+
+    return offspring
+
+
+def layer_crossover(a, b, pairs, layer_index, previous_index, permuted):
+    ax = a[layer_index]
+    bx = b[layer_index]
+
+    if previous_index is None:
+        permuted[:] = ax[:, pairs[0]], bx[:, pairs[1]]
+    else:
+        permuted[:] = permuted[0][:, pairs[0]], permuted[1][:, pairs[1]]
+
+
+def corr_matrix(X,Y):
+    xvar = tf.reduce_sum(tf.math.squared_difference(X, tf.reduce_mean(X, axis=0)), axis=0)
+    yvar = tf.reduce_sum(tf.math.squared_difference(Y, tf.reduce_mean(Y, axis=0)), axis=0)
+    dot = tf.tensordot(tf.transpose(X), Y, axes=1)
+
+    M = dot / tf.sqrt(xvar * yvar)
+
+    return M
+
+
+def pairwise_cross_corr(La, Lb):
+    n = La.shape[1]
+    scaler = StandardScaler()
+    n_La = scaler.fit_transform(La)
+    n_Lb = scaler.fit_transform(Lb)
+
+    m = corr_matrix(n_La, n_Lb).numpy()
+
+    m[np.isnan(m)] = -1
+    argmax_columns = np.flip(np.argsort(m, axis=0), axis=0)
+    #print(np.max(argmax_columns))
+    #print(argmax_columns.shape)
+    dead_neurons = np.sum(m, axis=0) == - n
+
+    pairs = np.full((2, n), fill_value=np.nan, dtype=np.int32)
+    pairs[1:] = np.arange(n)
+    index_add = 0
+
+    for index in range(n):
+        if not dead_neurons[index]:
+            for count in range(n):
+                if argmax_columns[count, index] not in pairs[0]:
+                    pairs[0, index_add] = argmax_columns[count, index]
+                    index_add += 1
+                    break
+
+    for index in range(n):
+        if index not in pairs[0] and index_add < n:
+            pairs[0, index_add] = index
+            index_add += 1
+
+    #print(pairs)
+    return pairs
+
+
+def get_indice_pairs(ax, bx):
+    l = np.empty((2,len(ax)), dtype=np.int32)
+    for index in range(len(ax)):
+        sm = np.abs(np.min(ax[index]) + np.min(bx[index]))
+        sp = np.abs(np.max(ax[index]) + np.max(bx[index]))
+        if sp > sm:
+            l[0, index] = np.argmax(ax[index])
+            l[1, index] = np.argmax(bx[index])
+        else:
+            l[0, index] = np.argmin(ax[index])
+            l[1, index] = np.argmax(bx[index])
+
+    return l
+
+
+def safe_crossover(ax, bx):
+    t = np.random.uniform(-0.1, 1.1) # 0.25
+    return (1-t) * ax + t * bx
 

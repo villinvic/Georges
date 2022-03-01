@@ -116,8 +116,7 @@ class Individual:
             self.name.inerit_from(other_individuals[0].name)
             self.elo.start = other_individuals[0].elo()
         elif len(other_individuals) == 2:
-            self.genotype.set_params(other_individuals[0].genotype.crossover(other_individuals[1].genotype),
-                                     trainable=True)
+            other_individuals[0].genotype.crossover(other_individuals[1].genotype, target_genotype=self.genotype)
             self.name.inerit_from(other_individuals[0].name, other_individuals[1].name)
 
             self.elo.start = (other_individuals[0].elo() + other_individuals[1].elo())*0.5

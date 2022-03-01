@@ -3,10 +3,13 @@ from tensorflow.keras.layers import Dense, LSTM
 from tensorflow.keras.backend import set_value
 import numpy as np
 from tensorflow.keras.activations import relu, softmax
+import itertools
 from copy import deepcopy
 
 from config.loader import Default
 from game.state import PlayerState
+
+from GA.genotype import nn_crossover
 
 class Distribution(object):
     def __init__(self, dim):
@@ -162,7 +165,6 @@ class Policy(tf.keras.Model, Default):
 
         self.prob = Dense(action_dim, dtype='float32', name="prob", activation="softmax")
 
-    @tf.function
     def init_body(self, features):
 
         if self.has_lstm:
@@ -364,7 +366,7 @@ class AC(tf.keras.Model, Default):
 
                 v_all = self.V(lstm_states)[: ,:, 0]
                 p = self.policy.get_probs(lstm_states[:, :-1])
-                kl = tf.divide(p, probs+1e-3)#tf.reduce_sum(p * tf.math.log(tf.divide(p, probs)), axis=-1)
+                kl = tf.divide(p, probs+1e-4)#tf.reduce_sum(p * tf.math.log(tf.divide(p, probs)), axis=-1)
                 indices = tf.concat(values=[self.pattern, self.range_, tf.expand_dims(actions, axis=2)], axis=2)
                 rho_mu = tf.minimum(1., tf.gather_nd(kl, indices, batch_dims=0))
                 targets = self.compute_trace_targets(v_all, rewards, rho_mu, gamma)
@@ -473,10 +475,6 @@ class AC(tf.keras.Model, Default):
             dense.set_weights(dense_layer_weights)
         self.V.v.set_weights(params['value_head'])
 
-
-
-
-    @tf.function
     def init_body(self, lstm):
         if self.has_lstm:
             lstm = self.lstm(lstm)
@@ -488,107 +486,87 @@ class AC(tf.keras.Model, Default):
         pass
     
     def crossover(self, other_policy):
-        model_size = np.sum([np.prod(v.get_shape().as_list()) for v in self.trainable_variables])
-        cross_point = np.random.randint(0, model_size)
-        c = 0
         parents = [self.get_training_params(), other_policy.get_training_params()]
-        np.random.shuffle(parents)
-
-        if parents[0]['lstm']:
-            for i in range(len(parents[0]['lstm'])):
-                if parents[0]['lstm'][i].ndim > 1 :
-                    for j in range(len(parents[0]['lstm'][i])):
-                            if c > cross_point:
-                                parents[0]['lstm'][i][j][:] = parents[1]['lstm'][i][j]
-                            elif c + len(parents[0]['lstm'][i][j]) >= cross_point:
-                                parents[0]['lstm'][i][j][cross_point-c:] = parents[1]['lstm'][i][j][cross_point-c:]
-                            c += len(parents[0]['lstm'][i][j])
-                else:
-                    if c > cross_point:
-                        parents[0]['lstm'][i][:] = parents[1]['lstm'][i]
-                    elif c + len(parents[0]['lstm'][i]) >= cross_point:
-                        parents[0]['lstm'][i][cross_point - c:] = parents[1]['lstm'][i][cross_point - c:]
-                    c += len(parents[0]['lstm'][i])
-
-            for i in range(len(parents[0]['dense_body'])):
-                if parents[0]['dense_body'][i].ndim > 1:
-                    for j in range(len(parents[0]['dense_body'][i])):
-                        if c > cross_point:
-                            parents[0]['dense_body'][i][j][:] = parents[1]['dense_body'][i][j]
-                        elif c + len(parents[0]['dense_body'][i][j]) >= cross_point:
-                            parents[0]['dense_body'][i][j][cross_point - c:] = parents[1]['dense_body'][i][j][cross_point - c:]
-                        c += len(parents[0]['dense_body'][i][j])
-                else:
-                    if c > cross_point:
-                        parents[0]['dense_body'][i][:] = parents[1]['dense_body'][i]
-                    elif c + len(parents[0]['dense_body'][i]) >= cross_point:
-                        parents[0]['dense_body'][i][cross_point - c:] = parents[1]['dense_body'][i][cross_point - c:]
-                    c += len(parents[0]['dense_body'][i])
-
-            for i in range(len(parents[0]['actor_core'])):
-                for j in range(len(parents[0]['actor_core'][i])):
-                    if parents[0]['actor_core'][i][j].ndim > 1 :
-                        for k in range(len(parents[0]['actor_core'][i][j])):
-                                if c > cross_point:
-                                    parents[0]['actor_core'][i][j][k][:] = parents[1]['actor_core'][i][j][k]
-                                elif c + len(parents[0]['actor_core'][i][j][k]) >= cross_point:
-                                    parents[0]['actor_core'][i][j][k][cross_point-c:] = parents[1]['actor_core'][i][j][k][cross_point-c:]
-                                c += len(parents[0]['actor_core'][i][j][k])
+        l = []
+        if self.has_lstm:
+            for w in parents:
+                l.append([])
+                for layer_name, weights in w.items():
+                    if 'core' in layer_name:
+                        for sub_layer in weights:
+                            l[-1].append(sub_layer[0])
+                            l[-1][-1] = np.concatenate([l[-1][-1], sub_layer[1][np.newaxis]], axis=0)
                     else:
-                        if c > cross_point:
-                            parents[0]['actor_core'][i][j][:] = parents[1]['actor_core'][i][j]
-                        elif c + len(parents[0]['actor_core'][i][j]) >= cross_point:
-                            parents[0]['actor_core'][i][j][cross_point - c:] = parents[1]['actor_core'][i][j][cross_point - c:]
-                        c += len(parents[0]['actor_core'][i][j])
+                        if 'lstm' in layer_name:
+                            l[-1].append(weights[0][:, :weights[0].shape[1] * 3 // 4])
+                            l[-1].append(weights[0][:, weights[0].shape[1] * 3 // 4:])
+                            l[-1].append(weights[1])
+                            l[-1][-3] = np.concatenate(
+                                [l[-1][-3], weights[-1][np.newaxis, :weights[0].shape[1] * 3 // 4]],
+                                axis=0)
+                            l[-1][-2] = np.concatenate(
+                                [l[-1][-2], weights[-1][np.newaxis, weights[0].shape[1] * 3 // 4:]],
+                                axis=0)
+                        else:
+                            l[-1].append(weights[0])
+                            l[-1][-1] = np.concatenate([l[-1][-1], weights[1][np.newaxis]], axis=0)
 
-            for i in range(len(parents[0]['actor_head'])):
-                if parents[0]['actor_head'][i].ndim > 1:
-                    for j in range(len(parents[0]['actor_head'][i])):
-                        if c > cross_point:
-                            parents[0]['actor_head'][i][j][:] = parents[1]['actor_head'][i][j]
-                        elif c + len(parents[0]['actor_head'][i][j]) >= cross_point:
-                            parents[0]['actor_head'][i][j][cross_point - c:] = parents[1]['actor_head'][i][j][cross_point - c:]
-                        c += len(parents[0]['actor_head'][i][j])
+            crossovered = nn_crossover(*l, architecture={
+                # Automate ?
+                0: None, 1: None, 2: None, 3: 1, 4: 3, 5: 4, 6: 3, 7: 6
+            })
+
+            count = 0
+            for layer_name, weights in parents[0].items():
+                if 'core' in layer_name:
+                    for sub_layer_i in range(len(weights)):
+                        weights[sub_layer_i][0][:] = crossovered[count][:-1]
+                        weights[sub_layer_i][1][:] = crossovered[count][-1]
+                        count += 1
                 else:
-                    if c > cross_point:
-                        parents[0]['actor_head'][i][:] = parents[1]['actor_head'][i]
-                    elif c + len(parents[0]['actor_head'][i]) >= cross_point:
-                        parents[0]['actor_head'][i][cross_point - c:] = parents[1]['actor_head'][i][cross_point - c:]
-                    c += len(parents[0]['actor_head'][i])
-                    
-            
-            for i in range(len(parents[0]['value_core'])):
-                for j in range(len(parents[0]['value_core'][i])):
-                    if parents[0]['value_core'][i][j].ndim > 1 :
-                        for k in range(len(parents[0]['value_core'][i][j])):
-                                if c > cross_point:
-                                    parents[0]['value_core'][i][j][k][:] = parents[1]['value_core'][i][j][k]
-                                elif c + len(parents[0]['value_core'][i][j][k]) >= cross_point:
-                                    parents[0]['value_core'][i][j][k][cross_point-c:] = parents[1]['value_core'][i][j][k][cross_point-c:]
-                                c += len(parents[0]['value_core'][i][j][k])
+                    if 'lstm' in layer_name:
+                        print(weights[0].shape)
+                        weights[0][:, :weights[0].shape[1] * 3 // 4] = crossovered[count][:-1]
+                        weights[-1][:weights[0].shape[1] * 3 // 4] = crossovered[count][-1]
+                        count += 1
+                        weights[0][:, weights[0].shape[1] * 3 // 4:] = crossovered[count][:-1]
+                        weights[-1][weights[0].shape[1] * 3 // 4:] = crossovered[count][-1]
+                        count += 1
+                        weights[1][:] = crossovered[count]
+                        count += 1
+
                     else:
-                        if c > cross_point:
-                            parents[0]['value_core'][i][j][:] = parents[1]['value_core'][i][j]
-                        elif c + len(parents[0]['value_core'][i][j]) >= cross_point:
-                            parents[0]['value_core'][i][j][cross_point - c:] = parents[1]['value_core'][i][j][cross_point - c:]
-                        c += len(parents[0]['value_core'][i][j])
-                    
-            
-            for i in range(len(parents[0]['value_head'])):
-                if parents[0]['value_head'][i].ndim > 1:
-                    for j in range(len(parents[0]['value_head'][i])):
-                        if c > cross_point:
-                            parents[0]['value_head'][i][j][:] = parents[1]['value_head'][i][j]
-                        elif c + len(parents[0]['value_head'][i][j]) >= cross_point:
-                            parents[0]['value_head'][i][j][cross_point - c:] = parents[1]['value_head'][i][j][cross_point - c:]
-                        c += len(parents[0]['value_head'][i][j])
-                else:
-                    if c > cross_point:
-                        parents[0]['value_head'][i][:] = parents[1]['value_head'][i]
-                    elif c + len(parents[0]['value_head'][i]) >= cross_point:
-                        parents[0]['value_head'][i][cross_point - c:] = parents[1]['value_head'][i][cross_point - c:]
-                    c += len(parents[0]['value_head'][i])
-                    
-            
+                        weights[0][:] = crossovered[count][:-1]
+                        weights[1][:] = crossovered[count][-1]
+                        count += 1
+        else:
+            for w in parents:
+                l.append([])
+                for layer_name, weights in w.items():
+                    if 'core' in layer_name:
+                        for sub_layer in weights:
+                            l[-1].append(sub_layer[0])
+                            l[-1][-1] = np.concatenate([l[-1][-1], sub_layer[1][np.newaxis]], axis=0)
+                    elif weights is not None:
+                        l[-1].append(weights[0])
+                        l[-1][-1] = np.concatenate([l[-1][-1], weights[1][np.newaxis]], axis=0)
+
+            crossovered = nn_crossover(*l, architecture={
+                # Automate ?
+                0: None, 1: 0, 2: 1, 3: 0, 4: 1
+            })
+
+            count = 0
+            for layer_name, weights in parents[0].items():
+                if 'lstm' not in layer_name:
+                    if 'core' in layer_name:
+                        for sub_layer_i in range(len(weights)):
+                            weights[sub_layer_i][0][:] = crossovered[count][:-1]
+                            weights[sub_layer_i][1][:] = crossovered[count][-1]
+                            count += 1
+                    else:
+                        weights[0][:] = crossovered[count][:-1]
+                        weights[1][:] = crossovered[count][-1]
+                        count += 1
 
         self.set_training_params(parents[0])
