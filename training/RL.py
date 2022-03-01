@@ -9,7 +9,7 @@ from copy import deepcopy
 from config.loader import Default
 from game.state import PlayerState
 
-from GA.genotype import nn_crossover
+from GA.misc import nn_crossover
 
 class Distribution(object):
     def __init__(self, dim):
