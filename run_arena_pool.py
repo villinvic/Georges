@@ -8,7 +8,7 @@ import getpass
 
 def run_many(n_arenas=1,
              hub_ip=None,
-             restart_freq=60*60,
+             restart_freq=60*180,
              ssh=False):
 
     if ssh:
