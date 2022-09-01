@@ -3,6 +3,7 @@ from math import floor, ceil
 
 class Name:
     _base = np.array([
+        'Nojima',
         'Hungrybox',
         'Leffen',
         'Mango',
