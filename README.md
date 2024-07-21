@@ -1,5 +1,9 @@
 # GEORGES
 
+## Current Project status
+The project changed direction entirely. I am currently working on the new **Seedsmash project** !
+This repository wont be updated anymore.
+
 ![](https://github.com/villinvic/Georges/blob/main/imgs/Georges_example.png)
 
 ### Generating Evolutionary Opponents as a Reinforcement Guided Exploration Solution
@@ -27,13 +31,6 @@ will replace the worst player Elo-wise in the population.
 The V-Trace algorithm **[3]** (an Actor Critic algorithm variant with off-policy correction) is used
 to train individuals, continuously, on top of the GA operators, from generated experience of
 games simulated on [Dolphin](https://github.com/dolphin-emu/dolphin).
-
-### Current Project status
-In testing phase.
-
-### Live demonstration
-
-Soon.
 
 ## References
 
