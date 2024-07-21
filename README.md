@@ -1,10 +1,10 @@
 # GEORGES
 
+![](https://github.com/villinvic/Georges/blob/main/imgs/Georges_example.png)
+
 ## Current Project status
 The project changed direction entirely. I am currently working on the new **Seedsmash project** !
 This repository wont be updated anymore.
-
-![](https://github.com/villinvic/Georges/blob/main/imgs/Georges_example.png)
 
 ### Generating Evolutionary Opponents as a Reinforcement Guided Exploration Solution
 
